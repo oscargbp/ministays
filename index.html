@@ -316,6 +316,10 @@ dl.details div{min-width:0} dl.details dt{font-size:12.5px;color:var(--muted);fo
 .house-res h3::before{content:"";display:inline-block;width:8px;height:8px;border-radius:2px;background:var(--c);margin-right:6px;vertical-align:2px}
 .update-bar{position:fixed;top:14px;left:50%;transform:translateX(-50%);z-index:90;display:flex;gap:14px;align-items:center;padding:10px 12px 10px 18px;border-radius:12px;background:var(--surface);border:1px solid var(--brand);box-shadow:0 10px 30px rgba(0,0,0,.35);font-weight:700}
 .conf-bar{top:auto;bottom:22px;border-color:var(--wait);max-width:min(760px,94vw)}
+.presence{font-size:12.5px;margin-top:8px;line-height:1.4}
+.presence:empty{display:none}
+.pres-item{display:flex;gap:6px;align-items:baseline;margin-top:3px}
+.dot-on{width:8px;height:8px;border-radius:50%;background:var(--ok);flex:none;box-shadow:0 0 6px var(--ok)}
 </style>
 
 <!--santi-app:inicio-->
@@ -585,6 +589,12 @@ dialog{background:var(--panel);border:1px solid var(--line-2);box-shadow:0 30px 
 <div class="toast" id="toast" role="status"></div>
 <script>
 const EN = {
+'No se pudo escribir en la carpeta «presencia»: {e}':'Could not write to the “presencia” folder: {e}','No se pudo leer la carpeta «presencia»: {e}':'Could not read the “presencia” folder: {e}',
+'Solo tú, de momento':'Only you, for now','Quién tiene la app abierta':'Who has the app open','Tu última señal: {a} · última lectura: {b}':'Your last signal: {a} · last read: {b}','nunca':'never',
+'Última señal':'Last signal','tú':'you','Ilegible':'Unreadable','Conectado':'Online','Desconectado':'Offline',
+'Todavía no hay señales en la carpeta «presencia». Si otra persona tiene la app abierta y no aparece aquí en un par de minutos, su OneDrive no está sincronizando esta carpeta.':'No signals in the “presencia” folder yet. If someone else has the app open and does not appear here within a couple of minutes, their OneDrive is not syncing this folder.',
+'Si alguien sale «Desconectado» aunque tenga la app abierta, revisa que su reloj y el tuyo estén en hora y que OneDrive no esté en pausa.':'If someone shows as “Offline” while they have the app open, check that both clocks are correct and OneDrive is not paused.',
+'Conectados ahora':'Online now','editando «{r}»':'editing “{r}”','{n} está editando esta ficha ahora mismo.':'{n} is editing this record right now.','Si guardáis los dos, la app combinará los cambios y avisará si coincidís en el mismo dato.':'If you both save, the app will combine the changes and warn you if you changed the same field.',
 'Alergia a {a}; en la casa hay {b}: confírmalo':'Allergic to {a}; the home has {b}: please confirm','gatos':'cats','perros':'dogs','otros animales':'other animals','animales':'animals',
 '1 · Familias':'1 · Families','2 · Disponibilidad':'2 · Availability','3 · Asignaciones':'3 · Assignments','Alumno no encontrado en la app':'Student not found in the app',
 'Antes de empezar, guarda una copia de seguridad y pide al resto del equipo que no edite mientras tanto.':'Before starting, save a backup and ask the rest of the team not to edit in the meantime.','Atrás':'Back',
@@ -2221,7 +2231,9 @@ function renderSide(){
     ${store==='shared' ? `<button data-act="teamSettings" style="color:var(--brand);font-weight:700">${t('Equipo: {f} · {n}',{f:esc(dirHandle?dirHandle.name:''), n:esc(userName)})}${syncConflicts.length?` <span class="count" style="background:var(--wait)">${syncConflicts.length}</span>`:''}</button>`
       : (store==='local' && canShare() && lsGet(MODE_KEY)) ? `<button data-act="goTeam">${t('Trabajar en equipo…')}</button>` : ''}
     <div class="saved" id="saved"></div>
+    <div class="presence" id="presence"></div>
     <div class="saved" style="opacity:.7">${t('Versión {n}',{n:APP_VERSION})}</div>`;
+  try{ renderPresence(); }catch(e){}
 }
 function previewBanner(){
   if(store!=='none' || ui.hideBanner) return '';
@@ -2250,6 +2262,7 @@ function cleanOrphans(){
 }
 function render(){
   try{ cleanOrphans(); }catch(e){}
+  try{ if(store==='shared' && ui.view!==render._lastView){ render._lastView = ui.view; presenceTouch(); } }catch(e){}
   renderSide(); updateSyncStatus();
   if(store==='shared-pending' || (store==='local' && canShare() && !lsGet(MODE_KEY))){ document.getElementById('main').innerHTML = viewSetup(); return; }
   document.getElementById('main').innerHTML = previewBanner() + ({panel:viewPanel, mando:viewDash, asignar:viewAssign, estudiantes:viewStudents, familias:viewFamilies,
@@ -3748,7 +3761,7 @@ if('serviceWorker' in navigator && /^https?:$/.test(location.protocol) && !windo
     window.addEventListener('focus', check);
   }).catch(()=>{});
 }
-const APP_VERSION = 25;
+const APP_VERSION = 27;
 function showUpdateBar(){
   if(document.getElementById('updBar')) return;
   const d = document.createElement('div'); d.id = 'updBar'; d.className = 'update-bar'; d.setAttribute('role','status');
@@ -3925,6 +3938,7 @@ async function initShared(){
   }catch(e){ syncErr = e.message; }
   clearInterval(syncTimer); syncTimer = setInterval(()=>{ pollShared(); updateSyncStatus(); }, 15000);
   render();
+  setTimeout(()=>{ writePresence(); readPresence(); }, 500);
 }
 window.addEventListener('focus', ()=>{ if(store==='shared') pollShared(); });
 document.addEventListener('visibilitychange', ()=>{ if(!document.hidden && store==='shared') pollShared(); });
@@ -3948,12 +3962,21 @@ function viewSetup(){
   </div>
   <div class="notice" style="margin-top:18px">${t('Para trabajar en equipo, cada persona tiene que sincronizar la carpeta de Documentos del equipo con OneDrive: en Teams, abre Archivos y pulsa «Sincronizar» (o «Agregar acceso directo a Mis archivos»). Luego elige aquí esa carpeta, o una subcarpeta dentro de ella, por ejemplo «Ministays».')}</div></div>`;
 }
-function openTeamSettings(){
+async function openTeamSettings(){
+  try{ await writePresence(); await readPresence(); }catch(e){}
   modal.innerHTML = `${mHead(t('Trabajo en equipo'))}
   <div class="m-body" style="display:block">
     <p style="margin-top:0">${t('Carpeta')}: <b>${esc(dirHandle ? dirHandle.name : '—')}</b> · ${t('archivo')} <code>${SHARED_FILE}</code></p>
     <label class="f">${t('Tu nombre')}<input id="teamName" value="${esc(userName)}"></label>
     <div class="row" style="margin:10px 0 18px"><button class="btn" data-act="saveTeamName">${t('Guardar nombre')}</button><button class="btn" data-act="syncNowBtn">${t('Sincronizar ahora')}</button></div>
+    <h3 style="font-size:16px;margin:0 0 8px">${t('Quién tiene la app abierta')}</h3>
+    ${presErr?`<div class="notice warn">${esc(presErr)}</div>`:''}
+    <p class="muted" style="font-size:13.5px;margin:0 0 6px">${t('Tu última señal: {a} · última lectura: {b}',{a:presLastWrite?ago(presLastWrite):t('nunca'), b:presLastRead?ago(presLastRead):t('nunca')})}</p>
+    ${presFiles.length?`<div class="tbl-wrap" style="margin-bottom:8px"><table class="tbl"><thead><tr><th>${t('Persona')}</th><th>${t('Última señal')}</th><th>${t('Estado')}</th></tr></thead><tbody>
+      ${presFiles.map(f=>`<tr><td>${esc(f.name)}${f.mine?' ('+t('tú')+')':''}</td><td>${f.at?esc(fmtY(toKey(new Date(f.at))))+' '+new Date(f.at).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}):'—'}</td>
+        <td>${f.broken?`<span class="tag red">${t('Ilegible')}</span>`:f.alive?`<span class="tag green">${t('Conectado')}</span>`:`<span class="tag">${t('Desconectado')}</span>`}</td></tr>`).join('')}</tbody></table></div>`
+      : `<p class="muted" style="font-size:13.5px">${t('Todavía no hay señales en la carpeta «presencia». Si otra persona tiene la app abierta y no aparece aquí en un par de minutos, su OneDrive no está sincronizando esta carpeta.')}</p>`}
+    <p class="muted" style="font-size:13px;margin:0 0 18px">${t('Si alguien sale «Desconectado» aunque tenga la app abierta, revisa que su reloj y el tuyo estén en hora y que OneDrive no esté en pausa.')}</p>
     <h3 style="font-size:16px;margin:0 0 8px">${t('Cambios que coincidieron con otra persona')}</h3>
     ${syncConflicts.length ? `<div class="list">${syncConflicts.map((c,i)=>`<div class="item" style="grid-template-columns:1fr auto"><div><b>${esc(c.label)}</b><div class="sub">${c.lostMine ? t('{n} lo cambió después que tú; se ha quedado su versión.',{n:esc(c.other)}) : t('Lo cambiaste después que {n}; se ha quedado tu versión.',{n:esc(c.other)})} · ${ago(c.at)}</div></div>
       <button class="btn small" data-act="restoreMine" data-id="${i}">${c.lostMine ? t('Recuperar mi versión') : t('Recuperar la versión de {n}',{n:esc(c.other)})}</button></div>`).join('')}</div>`
@@ -4919,6 +4942,7 @@ let editing = null;
 function markEditing(col, id){
   const r = id && (state[col]||[]).find(x=>x.id===id);
   editing = r ? {col, id, u:r._u||0, snap:clone(r)} : null;
+  if(typeof presenceTouch==='function'){ presenceTouch(); setTimeout(()=>renderPresence(), 50); }
 }
 const _openFamily = openFamily; openFamily = function(id, ...a){ markEditing('families', id); return _openFamily(id, ...a); };
 const _openStudent = openStudent; openStudent = function(id, ...a){ markEditing('students', id); return _openStudent(id, ...a); };
@@ -5109,6 +5133,56 @@ function gardaTag(f){
   return `<span class="tag ${f.gardaStatus==='pendiente'||f.gardaStatus==='parcial'?'amber':'red'}">Garda: ${esc(l)}</span>`;
 }
 
+
+
+/* ================= Quién está conectado y qué está editando (modo equipo) ================= */
+const PRES_DIR = 'presencia', PRES_TTL = 150000;
+let presenceOthers = [], presTimer = null, presLastWrite = 0, presErr = '', presSeen = {}, presFiles = [], presLastRead = 0;
+const presFile = n => (norm(n).replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'') || 'usuario') + '.json';
+function myPresence(offline){
+  const rec = editing && modal.open ? (state[editing.col]||[]).find(x=>x.id===editing.id) : null;
+  return {name:userName, view:ui.view, rec:rec ? {col:editing.col, id:editing.id, label:recLabel(editing.col, rec)} : null, at:offline ? 0 : Date.now()};
+}
+async function writePresence(offline){
+  if(store!=='shared' || !dirHandle || !userName) return;
+  try{ const dir = await dirHandle.getDirectoryHandle(PRES_DIR, {create:true});
+    await writeFile(await dir.getFileHandle(presFile(userName), {create:true}), JSON.stringify(myPresence(offline))); presLastWrite = Date.now(); presErr = ''; }catch(e){ presErr = t('No se pudo escribir en la carpeta «presencia»: {e}',{e:e.message||e.name}); }
+}
+function presenceTouch(){ if(store!=='shared') return; clearTimeout(presTimer); presTimer = setTimeout(()=>writePresence(), 800); }
+async function readPresence(){
+  if(store!=='shared' || !dirHandle) return;
+  try{ const dir = await dirHandle.getDirectoryHandle(PRES_DIR, {create:true}), out = [];
+    const files = [];
+    for await (const [name, h] of dir.entries()){
+      if(!/\.json$/i.test(name)) continue;
+      try{ const d = JSON.parse(await (await h.getFile()).text()); if(!d || !d.name) continue;
+        const prev = presSeen[name]; if(!prev || prev.at!==d.at) presSeen[name] = {at:d.at, local:Date.now()};
+        const alive = d.at>0 && (Date.now()-presSeen[name].local < PRES_TTL && (prev ? true : Math.abs(Date.now()-d.at) < PRES_TTL*4));
+        files.push({file:name, name:d.name, at:d.at, alive, mine:name===presFile(userName)});
+        if(alive && name!==presFile(userName) && nameKey(d.name)!==nameKey(userName)) out.push(d);
+      }catch(e){ files.push({file:name, name:name, at:0, alive:false, broken:true}); }
+    }
+    presenceOthers = out; presFiles = files; presLastRead = Date.now(); renderPresence(); }catch(e){ presErr = t('No se pudo leer la carpeta «presencia»: {e}',{e:e.message||e.name}); renderPresence(); }
+}
+const viewName = v => (VIEWS().find(x=>x[0]===v)||[])[1] || v;
+function renderPresence(){
+  const el = document.getElementById('presence');
+  if(el) el.innerHTML = store!=='shared' ? '' : presErr ? `<span style="color:var(--no)">${esc(presErr)}</span>`
+    : `<b>${t('Conectados ahora')}</b>${presenceOthers.length ? presenceOthers.map(p=>`<div class="pres-item"><span class="dot-on"></span><span><b>${esc(p.name)}</b> · ${p.rec ? t('editando «{r}»',{r:esc(p.rec.label)}) : esc(viewName(p.view))}</span></div>`).join('') : `<div class="pres-item muted">${t('Solo tú, de momento')}</div>`}`;
+  // aviso dentro de la ficha abierta
+  if(editing && modal.open){
+    const who = presenceOthers.filter(p=>p.rec && p.rec.col===editing.col && p.rec.id===editing.id);
+    const body = modal.querySelector('.m-body'); if(!body) return;
+    let w = document.getElementById('presWarn');
+    if(who.length){ if(!w){ w = document.createElement('div'); w.id = 'presWarn'; w.className = 'notice warn full'; w.style.gridColumn = '1/-1'; body.prepend(w); }
+      w.innerHTML = `<b>${t('{n} está editando esta ficha ahora mismo.',{n:who.map(p=>esc(p.name)).join(' y ')})}</b> ${t('Si guardáis los dos, la app combinará los cambios y avisará si coincidís en el mismo dato.')}`; }
+    else if(w) w.remove();
+  }
+}
+modal.addEventListener('close', ()=>{ setTimeout(()=>{ if(!modal.open){ editing = null; presenceTouch(); } }, 0); });
+setInterval(()=>{ if(store==='shared' && !document.hidden){ if(Date.now()-presLastWrite > 30000) writePresence(); readPresence(); } }, 10000);
+window.addEventListener('pagehide', ()=>{ writePresence(true); });
+document.addEventListener('visibilitychange', ()=>{ if(store!=='shared') return; if(document.hidden) writePresence(true); else { writePresence(); readPresence(); } });
 
 (async () => { await load();
   if(store==='shared-go'){ await initShared(); if(ui.askSeed) openSeedAsk(); return; }
