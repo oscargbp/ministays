@@ -585,6 +585,33 @@ dialog{background:var(--panel);border:1px solid var(--line-2);box-shadow:0 30px 
 <div class="toast" id="toast" role="status"></div>
 <script>
 const EN = {
+'Alergia a {a}; en la casa hay {b}: confírmalo':'Allergic to {a}; the home has {b}: please confirm','gatos':'cats','perros':'dogs','otros animales':'other animals','animales':'animals',
+'1 · Familias':'1 · Families','2 · Disponibilidad':'2 · Availability','3 · Asignaciones':'3 · Assignments','Alumno no encontrado en la app':'Student not found in the app',
+'Antes de empezar, guarda una copia de seguridad y pide al resto del equipo que no edite mientras tanto.':'Before starting, save a backup and ask the rest of the team not to edit in the meantime.','Atrás':'Back',
+'Cada número o «booked» de una familia en un programa se convierte en un tramo confirmado con las fechas del programa; cada «tbc» o «standby», en un tramo pendiente. Se crearán {n} tramos (los que ya existan no se duplican).':'Each number or “booked” for a family in a programme becomes a confirmed range with the programme dates; each “tbc” or “standby” becomes a pending range. {n} ranges will be created (existing ones are not duplicated).',
+'Caducado':'Expired','Camas':'Beds','Cancelado':'Cancelled',
+'Carga el Excel de la temporada (HF Availability y PAIRINGS): crea las familias que falten, su disponibilidad por programa y las asignaciones hechas a mano.':'Load the season Excel (HF Availability and PAIRINGS): creates missing families, their availability per programme and the manual assignments.',
+'Carga el Excel de la temporada («HF Availability» y las hojas «PAIRINGS»). En tres pasos se revisan las familias, su disponibilidad por programa y las asignaciones hechas a mano. No se guarda nada hasta el final.':'Load the season Excel (“HF Availability” and the “PAIRINGS” sheets). In three steps you review the families, their availability per programme and the manual assignments. Nothing is saved until the end.',
+'Columnas sin fecha reconocida (se ignoran): {l}':'Columns without a recognised date (ignored): {l}',
+'Comprueba con qué familia de la app se une cada fila. Si no está, elige «Crear nueva». A las existentes solo se les completan los datos que les falten.':'Check which app family each row is linked to. If it is not there, choose “Create new”. Existing families only get their missing data filled in.',
+'Crear como periodos los programas que aún no existen en la app (con sus alumnos previstos y su estado)':'Create the programmes not yet in the app as periods (with planned students and status)',
+'Disponibilidad aproximada: {d}':'Approximate availability: {d}','El Garda vetting caduca antes del final de la estancia':'Garda vetting expires before the end of the stay',
+'Elegir el Excel de la temporada':'Choose the season Excel','En el Excel':'In the Excel','En la app':'In the app','Familia «{f}» no encontrada':'Family “{f}” not found',
+'Garda vetting: caduca el':'Garda vetting: expires on','Garda vetting: notas':'Garda vetting: notes','Garda vetting: {s}':'Garda vetting: {s}','Habitaciones: {d}':'Rooms: {d}','Hoja':'Sheet',
+'Importación terminada':'Import finished','Importar programa de temporada':'Import season programme','Importar todo':'Import everything','Invitación enviada':'Invitation sent',
+'Las asignaciones que no cumplen alguna regla se aplican igualmente, porque ya están acordadas, y aparecerán como conflicto en el Panel para revisarlas.':'Assignments that break a rule are applied anyway, since they were already agreed, and will show as conflicts in the Dashboard for review.',
+'Monitor no encontrado en la app':'Group leader not found in the app','No cumple una regla':'Breaks a rule','No encontrados':'Not found',
+'No encuentro la hoja de disponibilidad (columna «Host Family»).':'Cannot find the availability sheet (“Host Family” column).','No se ha podido leer el Excel (hace falta conexión a internet la primera vez).':'Could not read the Excel (an internet connection is needed the first time).',
+'No se pueden asignar':'Cannot be assigned','No se reconoce la fecha de la hoja':'The sheet date is not recognised','Periodo en la app':'Period in the app','Persona':'Person',
+'Poner como plazas de cada familia sus camas («No. of beds») si en la app tiene menos':'Set each family’s places to its beds (“No. of beds”) if it has fewer in the app','Preferencia: {d}':'Preference: {d}','Programa':'Programme','Programa de temporada':'Season programme',
+'Revisa ahora en el Panel los conflictos y lo que quede sin asignar, y en Disponibilidad que cada programa tiene sus camas. Si algo no cuadra, puedes volver atrás con «Restaurar copia».':'Now check conflicts and anything unassigned in the Dashboard, and in Availability that each programme has its beds. If something is wrong, you can go back with “Restore backup”.',
+'Se asignan':'Assigned','Siguiente: asignaciones':'Next: assignments','Siguiente: disponibilidad':'Next: availability','Sin acreditar':'Not vetted','Sin familia en el Excel':'No family in the Excel',
+'Solo algún adulto':'Only some adults','Vigente':'Valid','Vuelo: {f}':'Flight: {f}','ahora en {f}':'now with {f}','caduca el {d}':'expires on {d}','dudosas: elige':'unclear: choose',
+'familias completadas':'families completed','familias en el Excel':'families in the Excel','hasta {d}':'until {d}','p. ej. vigente la madre, pendiente el padre':'e.g. valid for the mother, pending for the father',
+'pend.':'pend.','periodos creados':'periods created','se creará':'will be created','se crearán':'will be created','tramos de disponibilidad':'availability ranges','ya asignado':'already assigned',
+'ya están en la app':'already in the app','{n} asignaciones':'{n} assignments','{n} asignación':'{n} assignment','{n} monitores':'{n} group leaders',
+'{n} persona no tiene familia en el Excel: se quedan como están.':'{n} person has no family in the Excel: left as is.','{n} personas no tienen familia en el Excel: se quedan como están.':'{n} people have no family in the Excel: left as is.','➕ Crear nueva':'➕ Create new',
+
 'Monitores duplicados':'Duplicate group leaders','{n} ficha':'{n} record','{n} fichas':'{n} records',
 'Buscar duplicados':'Find duplicates','{n} alumno parece estar duplicado':'{n} student seems to be duplicated','{n} alumnos parecen estar duplicados':'{n} students seem to be duplicated',
 'Mismo nombre o mismo documento en el mismo periodo.':'Same name or same ID document in the same period.','Revisar y fusionar':'Review and merge','Alumnos duplicados':'Duplicate students',
@@ -1625,7 +1652,7 @@ const nightsOf = st => Math.max(0, Math.round((parse(st.departure)-parse(st.arri
 const KEY = 'acogida-datos-v1', LANG_KEY = 'acogida-idioma';
 const DIETS = ['vegetariana','vegana','sin gluten','sin lactosa','halal','kosher'];
 const CYCLE = {none:'yes', yes:'no', no:'pending', pending:'none'};
-let state = {families:[], students:[], tutors:[], periods:[], monitors:[], groups:[], residences:[], mail:{}};
+let state = {families:[], students:[], tutors:[], periods:[], monitors:[], groups:[], residences:[], inbox:[], importedKeys:[], mail:{}};
 let ui = {view:'panel', week:mondayOf(new Date()), periodId:null, availTab:'periodos', showPast:false, stuPeriod:'', tlStart:toKey(new Date(new Date().getFullYear(), new Date().getMonth(), 1)), selected:null, famSearch:'', stuFilter:'todos', stuSearch:'', period:8,
   tutorSel:null, histTab:'familias', histFam:null, histPerson:null, histSearch:''};
 const uid = () => Math.random().toString(36).slice(2,10);
@@ -1805,7 +1832,7 @@ const INTEREST_RX = {deporte:/deport|sport|f[uú]tbol|football|gaa|rugby|hockey|
   cocina:/cocin|cook|reposter|bak/, videojuegos:/videojuego|video game|gaming|ps5|minecraft|roblox|xbox/, juegos:/juegos de mesa|board game|ajedrez|chess|cartas|card game|uno|monopoly/,
   cine:/\bcine\b|film|movie|pel[ií]cula|\btv\b/, baile:/baile|danc|danza/, animales:/animal|mascota|equitaci|perro|\bdog/};
 const interestsFrom = txt => { const s = norm(txt); return Object.keys(INTEREST_RX).filter(k=>INTEREST_RX[k].test(s)); };
-const interestsFromOptions = v => { const out = []; splitMulti(v).forEach(x=>{ const n = norm(x); const it = INTERESTS().find(([,,o])=>o.split(' / ').some(p=>n.includes(norm(p)))); if(it && !out.includes(it[0])) out.push(it[0]); }); return out.length ? out : interestsFrom(v); };
+const interestsFromOptions = v => { const out = []; splitMulti(v).forEach(x=>{ const n = norm(x); const it = INTERESTS().find(([,,o])=>o.split(' / ').some(p=>n.includes(norm(p)))); if(it && !out.includes(it[0])) out.push(it[0]); }); interestsFrom(v).forEach(k=>{ if(!out.includes(k)) out.push(k); }); return out; };
 const ALLERGY_RX = {'frutos secos':/nut|fruto|cacahuet|peanut|almendr|nuez/, 'celiaquía':/celi|coeliac|gluten|trigo|wheat/, 'lactosa':/lact|leche|dairy|milk|l[aá]cte/, 'huevo':/huevo|\begg/, 'marisco':/marisco|shellfish|pescado|\bfish|seafood|shrimp|prawn|gamba|langost/};
 function allergyNeeds(txt){ const s = norm(txt); if(!s) return []; const k = Object.keys(ALLERGY_RX).filter(a=>ALLERGY_RX[a].test(s)); return k.length ? k : ['otra']; }
 function allergiesOkFrom(txt){ const s = norm(txt); if(!s || /^(no|none|ninguna?)$/.test(s)) return []; const k = Object.keys(ALLERGY_RX).filter(a=>ALLERGY_RX[a].test(s)); if(/posib|consult|any|all|cualquier|discuss|hablar|alerg|intoler|yes/.test(s)) k.push('consultar'); return [...new Set(k)]; }
@@ -1888,6 +1915,9 @@ function openFamily(id){
     <div class="f full"><span>${t('Alergias alimentarias que pueden atender')}</span>${checksHTML('f_allergy', ALLERGIES(), f.allergiesOk)}</div>
     ${sec(t('Preferencias, intereses y experiencia'))}
     <label class="f">${t('Tipo de disponibilidad')}${selectHTML('f_stayType', FAM_STAY(), f.stayType||'ambas')}</label>
+    <label class="f">Garda vetting${selectHTML('f_garda', GARDA(), f.gardaStatus||'')}</label>
+    <label class="f">${t('Garda vetting: caduca el')}<input id="f_gardaExp" type="date" value="${esc(f.gardaExpiry||'')}"></label>
+    <label class="f full">${t('Garda vetting: notas')}<input id="f_gardaNotes" value="${esc(f.gardaNotes||'')}" placeholder="${t('p. ej. vigente la madre, pendiente el padre')}"></label>
     <label class="f">${t('Acogen a')}<select id="f_gender">${[['indiferente',t('Chicos y chicas')],['chica',t('Solo chicas')],['chico',t('Solo chicos')]].map(([k,l])=>`<option value="${k}" ${f.gender===k?'selected':''}>${l}</option>`).join('')}</select></label>
     <label class="f">${t('Años acogiendo con SEK')}<input id="f_hostYears" type="number" min="0" max="40" value="${esc(f.hostYears??'')}"></label>
     <div class="f full"><div class="checks"><label><input type="checkbox" id="f_firstTime" ${f.firstTime?'checked':''}> ${t('Familia nueva: primera vez que acoge con SEK')}</label></div></div>
@@ -1917,7 +1947,7 @@ function saveFamilyAction(id){
     busStop:val('f_busStop'), distance:numOrEmpty(val('f_distance')), familyStatus:val('f_fstatus'), professions:val('f_professions'), nationality:val('f_nationality'), languages:val('f_languages'),
     otherAdults:val('f_otherAdults'), children, kids:legacy.join(', '), religion:val('f_religion'), instruments:val('f_instruments'), bedrooms:numOrEmpty(val('f_bedrooms')), capacity:cap,
     roomType:val('f_roomType'), beds:numOrEmpty(val('f_beds')), ownBath:chk('f_ownBath'), pets:chk('f_pets'), petTypes:checked('f_petType'), petWhere:val('f_petWhere'), petsDesc:val('f_petsDesc'),
-    smokeLevel:smoke, smokers:smoke==='dentro', diets:checked('f_diet'), allergiesOk:checked('f_allergy'), stayType:val('f_stayType'), gender:val('f_gender'), hostYears:numOrEmpty(val('f_hostYears')), firstTime:chk('f_firstTime'),
+    smokeLevel:smoke, smokers:smoke==='dentro', diets:checked('f_diet'), allergiesOk:checked('f_allergy'), stayType:val('f_stayType'), gardaStatus:val('f_garda'), gardaExpiry:val('f_gardaExp'), gardaNotes:val('f_gardaNotes'), gender:val('f_gender'), hostYears:numOrEmpty(val('f_hostYears')), firstTime:chk('f_firstTime'),
     experience:val('f_experience'), interests:checked('f_interest'), interestsNotes:val('f_interestsNotes'), profileUrl:val('f_profileUrl'), profileReviewed:val('f_profileReviewed'), intro:document.getElementById('f_intro').value.trim(), notes:val('f_notes')};
   if(id) Object.assign(famById(id), data); else state.families.push({id:uid(), ranges:[], ...data});
   modal.close(); save(); render(); toast(id?t('Familia guardada'):t('Familia añadida'));
@@ -1936,6 +1966,7 @@ function famTags(f){
     f.ownBath ? `<span class="tag green">${t('Baño propio')}</span>` : '',
     ages.length ? `<span class="tag">${t('Hijos: {k} años',{k:ages.join(', ')})}</span>` : `<span class="tag">${t('Sin hijos en casa')}</span>`,
     f.pets ? `<span class="tag amber">${t('Mascotas')}${f.petsDesc?': '+esc(f.petsDesc):''}${f.petWhere==='fuera'?' · '+t('fuera'):f.petWhere==='apartada'?' · '+t('pueden apartarse'):''}</span>` : '',
+    gardaTag(f),
     f.stayType && f.stayType!=='ambas' ? `<span class="tag blue">${famStayLabel(f.stayType)}</span>` : '',
     sl==='dentro' ? `<span class="tag red">${t('Fuman dentro')}</span>` : sl==='fuera' ? `<span class="tag amber">${t('Fuman o vapean fuera')}</span>` : '',
     f.gender&&f.gender!=='indiferente' ? `<span class="tag">${f.gender==='chica'?t('Solo chicas'):t('Solo chicos')}</span>` : '',
@@ -1961,7 +1992,7 @@ function famDetailsHTML(f){
   const row = (l, v) => v ? `<div><dt>${l}</dt><dd>${v}</dd></div>` : '';
   const kids = (f.children||[]).length ? f.children.map(c=>`${esc(c.name||'—')}${c.sex?` (${genderLabel(c.sex)})`:''}${c.dob?` · ${t('{n} años',{n:ageOf(c.dob)})}`:''}${c.home===false?` · ${t('no vive en casa')}`:''}`).join('<br>') : esc(f.kids||'');
   return `<dl class="details">
-    ${row(t('Tipo de disponibilidad'), famStayLabel(f.stayType||'ambas'))}${row(t('Zona'), esc(f.zone||''))}${row('Eircode', esc(f.eircode||''))}${row(t('Parada de bus o recogida'), esc(f.busStop||''))}${row(t('Teléfono 2'), esc(f.phone2||''))}
+    ${row(t('Tipo de disponibilidad'), famStayLabel(f.stayType||'ambas'))}${row('Garda vetting', f.gardaStatus ? optLabel(GARDA(), f.gardaStatus) + (f.gardaExpiry?' · '+t('caduca el {d}',{d:fmtY(f.gardaExpiry)}):'') + (f.gardaNotes?' · '+esc(f.gardaNotes):'') : '')}${row(t('Zona'), esc(f.zone||''))}${row('Eircode', esc(f.eircode||''))}${row(t('Parada de bus o recogida'), esc(f.busStop||''))}${row(t('Teléfono 2'), esc(f.phone2||''))}
     ${row(t('Situación familiar'), f.familyStatus?optLabel(FSTATUS(), f.familyStatus):'')}${row(t('Profesiones de los adultos'), esc(f.professions||''))}${row(t('Nacionalidad'), esc(f.nationality||''))}
     ${row(t('Otros adultos que viven en casa'), esc(f.otherAdults||''))}${row(t('Hijos'), kids)}${row(t('Religión (opcional)'), esc(f.religion||''))}${row(t('Instrumentos musicales'), esc(f.instruments||''))}
     ${row(t('Dormitorios de la casa'), esc(f.bedrooms||''))}${row(t('Habitación del estudiante'), f.roomType?optLabel(ROOMS(), f.roomType)+(f.beds?` · ${pl(Number(f.beds), t('{n} cama'), t('{n} camas'))}`:''):'')}${row(t('Baño propio'), f.ownBath?t('Sí'):'')}
@@ -1997,6 +2028,7 @@ function evaluate(st, f){
 
   const busy = allGuests().filter(o => o.id!==st.id && o.familyId===f.id && overlaps(o,st)).length;
   const mb = monitorBlockFor(st, f); if(mb) blocks.push(mb);
+  if(f.gardaStatus && !f.isResidence && !gardaOk(f, st.departure)){ score -= 15; cons.push(f.gardaStatus==='vigente' ? t('El Garda vetting caduca antes del final de la estancia') : t('Garda vetting: {s}',{s:optLabel(GARDA(), f.gardaStatus)})); }
   if(f.stayType && f.stayType!=='ambas' && !f.isResidence){ const stt = st.stayType||'mini';
     if(f.stayType===stt){ score += 5; pros.push(stt==='full'?t('Prefiere alumnos Full Year'):t('Prefiere Ministays')); }
     else { score -= 15; cons.push(f.stayType==='full'?t('La familia prefiere alumnos Full Year'):t('La familia prefiere Ministays')); } }
@@ -2012,6 +2044,7 @@ function evaluate(st, f){
     const types = f.petTypes||[], onlyOther = types.length && types.every(x=>x==='otros');
     if(onlyOther || f.petWhere==='fuera') cons.push(t('Mascotas que no conviven dentro de casa') + (f.petsDesc ? ` (${f.petsDesc})` : ''));
     else if(f.petWhere==='apartada'){ score -= 10; cons.push(t('Mascotas que pueden mantenerse apartadas: confirmar con la familia')); }
+    else if(petKindsMismatch(st, f)){ score -= 5; cons.push(t('Alergia a {a}; en la casa hay {b}: confírmalo',{a:petKindLabels(stuPetKinds(st)), b:petKindLabels(f.petTypes)})); }
     else blocks.push(t('Tiene mascotas y el estudiante es alérgico') + (f.petsDesc ? ` (${f.petsDesc})` : ''));
   }
   if(st.diet && st.diet!=='ninguna' && !(f.diets||[]).includes(st.diet)) blocks.push(t('No ofrece dieta {d}',{d:dietLabel(st.diet)}));
@@ -3588,7 +3621,7 @@ function acceptItem(it){
     f.ranges = [...(f.ranges||[]), ...nr.map(r=>({id:uid(), from:r.from, to:r.to, status:'yes'}))];
   }
   state.importedKeys = [...(state.importedKeys||[]), it.key];
-  state.inbox = state.inbox.filter(x=>x.id!==it.id);
+  state.inbox = (state.inbox||[]).filter(x=>x.id!==it.id);
   return true;
 }
 
@@ -3715,7 +3748,7 @@ if('serviceWorker' in navigator && /^https?:$/.test(location.protocol) && !windo
     window.addEventListener('focus', check);
   }).catch(()=>{});
 }
-const APP_VERSION = 22;
+const APP_VERSION = 25;
 function showUpdateBar(){
   if(document.getElementById('updBar')) return;
   const d = document.createElement('div'); d.id = 'updBar'; d.className = 'update-bar'; d.setAttribute('role','status');
@@ -5032,10 +5065,56 @@ Object.assign(actions, {
     modal.close(); save(); render();
     toast(pl(n, t('{n} ficha duplicada fusionada'), t('{n} fichas duplicadas fusionadas'))); }
 });
+/* ---- Alergia a qué animales ---- */
+function stuPetKinds(st){
+  const s = norm([st.envAllergies, st.foodAllergies, st.notes, st.medical].join(' ')), k = [];
+  if(/\bcats?\b|gato/.test(s)) k.push('gato'); if(/\bdogs?\b|perro/.test(s)) k.push('perro');
+  if(/\bpets?\b|mascota|animal/.test(s) || !k.length) return ['todos'];
+  return k;
+}
+const petKindLabels = arr => (arr||[]).map(k=>k==='gato'?t('gatos'):k==='perro'?t('perros'):k==='otros'?t('otros animales'):t('animales')).join(', ');
+function petKindsMismatch(st, f){
+  const kinds = stuPetKinds(st), fam = f.petTypes||[];
+  if(kinds.includes('todos') || !fam.length) return false;
+  return !fam.some(k=>kinds.includes(k));
+}
+/* ================= Garda vetting ================= */
+const MONTHS = {jan:1,ene:1,feb:2,mar:3,apr:4,abr:4,may:5,jun:6,jul:7,aug:8,ago:8,sep:9,oct:10,nov:11,dec:12,dic:12};
+const monthOf = s => { const m = norm(s).match(/\b(jan|ene|feb|mar|apr|abr|may|jun|jul|aug|ago|sep|oct|nov|dec|dic)[a-z]*/); return m ? MONTHS[m[1]] : 0; };
+
+/* --- Garda vetting --- */
+const GARDA = () => [['',t('Sin indicar')],['vigente',t('Vigente')],['parcial',t('Solo algún adulto')],['pendiente',t('Invitación enviada')],['caducado',t('Caducado')],['no',t('Sin acreditar')]];
+function gardaFrom(v){
+  if(v==null || v==='') return {};
+  if(v instanceof Date || typeof v==='number'){ const d = importDate(v); return d ? {gardaStatus:'vigente', gardaExpiry:d, gardaNotes:''} : {}; }
+  const raw = String(v).trim(), s = norm(raw); if(!s || s==='?') return {gardaNotes:raw};
+  if(/expir|caduc/.test(s)) return {gardaStatus:'caducado', gardaNotes:raw};
+  if(/inv|sent|enviad/.test(s) && !/\byes\b/.test(s)) return {gardaStatus:'pendiente', gardaNotes:raw};
+  if(/^no\b|no vetting|no-/.test(s)) return {gardaStatus:'no', gardaNotes:raw};
+  if(/\byes\b|\bsi\b/.test(s)){
+    const parcial = /\byes\b.*\bno\b/.test(s);
+    let year = 0, month = monthOf(s);
+    (s.match(/\d+/g)||[]).forEach(n=>{ let y = Number(n); if(y>=24 && y<=40) y += 2000; if(y>=2024 && y<=2040) year = Math.max(year, y); });
+    const sl = s.match(/\b(\d{1,2})\/(\d{2})\b/); if(sl && !month) month = Number(sl[1]);
+    let exp = ''; if(year){ const mm = month || 12; const last = new Date(year, mm, 0); exp = toKey(last); }
+    return {gardaStatus:parcial ? 'parcial' : 'vigente', gardaExpiry:exp, gardaNotes:raw};
+  }
+  return {gardaNotes:raw};
+}
+const gardaOk = (f, until) => f.gardaStatus==='vigente' && (!f.gardaExpiry || f.gardaExpiry >= (until||todayKey()));
+function gardaTag(f){
+  if(!f.gardaStatus) return '';
+  if(gardaOk(f)) return `<span class="tag green">Garda ${f.gardaExpiry?t('hasta {d}',{d:fmtY(f.gardaExpiry)}):''}</span>`;
+  const l = f.gardaStatus==='vigente' ? t('Caducado') : optLabel(GARDA(), f.gardaStatus);
+  return `<span class="tag ${f.gardaStatus==='pendiente'||f.gardaStatus==='parcial'?'amber':'red'}">Garda: ${esc(l)}</span>`;
+}
+
+
 (async () => { await load();
   if(store==='shared-go'){ await initShared(); if(ui.askSeed) openSeedAsk(); return; }
   if(migrate()){ syncStays(); save(); } else syncStays(); render();
   setSaved(store==='none' ? t('Sin almacenamiento: los datos se perderán al cerrar') : state.families.length ? t('Datos cargados de este dispositivo') : ''); })();
+
 
 
 
