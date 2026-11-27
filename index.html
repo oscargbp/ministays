@@ -584,6 +584,8 @@ dialog{background:var(--panel);border:1px solid var(--line-2);box-shadow:0 30px 
 <div class="toast" id="toast" role="status"></div>
 <script>
 const EN = {
+'Desmarca los que no sean correctos. Se buscan entre las filas del archivo y los alumnos que ya están en la app en el mismo periodo.':'Untick any that are wrong. Matches are searched among the rows in the file and the students already in the app for the same period.',
+'ya en la app':'already in the app',
 'La edad se calcula sola a la fecha de llegada':'The age is calculated automatically at the arrival date','Calculada con la fecha de nacimiento':'Calculated from the date of birth',
 'Rellénala solo si no tienes la fecha de nacimiento':'Only fill this in if you do not have the date of birth','Calculada a la fecha de llegada ({d})':'Calculated at the arrival date ({d})',
 'Calculada a fecha de hoy; se ajustará a la fecha de llegada':'Calculated as of today; it will be adjusted to the arrival date',
@@ -3672,7 +3674,7 @@ if('serviceWorker' in navigator && /^https?:$/.test(location.protocol) && !windo
     window.addEventListener('focus', check);
   }).catch(()=>{});
 }
-const APP_VERSION = 15;
+const APP_VERSION = 16;
 function showUpdateBar(){
   if(document.getElementById('updBar')) return;
   const d = document.createElement('div'); d.id = 'updBar'; d.className = 'update-bar'; d.setAttribute('role','status');
@@ -4122,11 +4124,13 @@ const STU_ALIASES = {name:['Nombre y apellidos','Nombre completo','Alumno','Estu
   school:['Colegio de origen','Colegio'], sek:['SEK o No SEK','SEK'], course:['Curso'], petAllergy:['Alergia a animales'], foodAllergies:['Alergias alimentarias'], diet:['Dieta'],
   kidsPref:['Niños en la familia'], stayType:['Tipo de estancia','Tipo'], smokeFree:['Casa sin humo'], ownRoom:['Habitación individual'], interests:['Intereses'], priorities:['Prioridades'], notes:['Observaciones']};
 const studentBatchQuestions = () => [...studentQuestions().filter(q=>!['consent','extend'].includes(q[0])).map(q=>{ const c = [...q]; while(c.length<5) c.push(null); c[5] = STU_ALIASES[q[0]]||[]; c[3] = ['firstName'].includes(q[0]); return c; }),
-  ['period','Period / Periodo','text',false,null,['Periodo']], ['tutor','Tutor','text',false,null,['Tutor','Tutor de seguimiento']]];
+  ['period','Period / Periodo','text',false,null,['Periodo']], ['tutor','Tutor','text',false,null,['Tutor','Tutor de seguimiento']],
+  ['group','Group code / Código de grupo','text',false,null,['Grupo','Código de grupo','Group','Code']],
+  ['share','Shares a home with / Comparte alojamiento con','text',false,null,['Comparte alojamiento con','Compartir alojamiento','Compartir aloj.','Sharing with','Compañeros']]];
 const familyBatchQuestions = () => familyQuestions().filter(q=>q[0]!=='consent').map(q=>{ const c = [...q]; while(c.length<6) c.push(null); c[5] = [...(c[5]||[])];
   if(q[0]==='children') c[5].push('Hijos'); if(q[0]==='gender') c[5].push('Acogen a'); if(q[0]==='notes') c[5].push('Observaciones'); if(q[0]==='periods') c[5].push('Periodos en los que puede acoger','Periodos');
   if(q[0]==='capacity') c[5].push('Plazas'); if(q[0]==='diets') c[5].push('Dietas que ofrecen'); if(q[0]==='allergiesOk') c[5].push('Alergias que pueden atender'); if(q[0]==='name') c[5].push('Apellidos'); c[3] = q[0]==='name'; return c; });
-const STU_TEMPLATE = ['Nombre','Apellidos','Fecha de nacimiento (dd/mm/aaaa)','Correo','Sexo (chica/chico)','País','Idioma principal','Colegio de origen','SEK o No SEK','Curso','Periodo','Alergia a animales (sí/no)','Alergias alimentarias','Dieta (ninguna/vegetariana/vegana/sin gluten/sin lactosa/halal/kosher)','Tipo de estancia (Ministay/Full Year)','Niños en la familia (sí/no/indiferente)','Casa sin humo (sí/no)','Habitación individual (sí/no)','Intereses (separados por ;)','Prioridades (separadas por ;, la primera es la más importante)','Tutor','Observaciones'];
+const STU_TEMPLATE = ['Nombre','Apellidos','Fecha de nacimiento (dd/mm/aaaa)','Correo','Sexo (chica/chico)','País','Idioma principal','Colegio de origen','SEK o No SEK','Curso','Periodo','Alergia a animales (sí/no)','Alergias alimentarias','Dieta (ninguna/vegetariana/vegana/sin gluten/sin lactosa/halal/kosher)','Tipo de estancia (Ministay/Full Year)','Niños en la familia (sí/no/indiferente)','Casa sin humo (sí/no)','Habitación individual (sí/no)','Intereses (separados por ;)','Prioridades (separadas por ;, la primera es la más importante)','Tutor','Grupo (código)','Comparte alojamiento con (nombres separados por comas)','Observaciones'];
 const FAM_TEMPLATE = ['Familia (apellidos)','Persona de contacto','Correo','Móvil','Móvil 2','Dirección','Zona','Eircode','Parada de bus','Plazas','Dormitorios de la casa','Habitación del estudiante (individual/compartida/litera)','Camas','Baño propio (sí/no)','Hijos (nombre, chico/chica, dd/mm/aaaa; …)','Otros adultos en casa','Mascotas (sí/no)','Mascotas: detalle','Mascotas: dónde (dentro/fuera/apartadas)','Fumadores (no/fuera/dentro)','Idiomas en casa','Dietas que ofrecen (separadas por ;)','Alergias / intolerancias que pueden atender','Tipo de disponibilidad (Full Year/Ministays/Ambas)','Acogen a (chicos y chicas/solo chicas/solo chicos)','Situación familiar','Profesiones','Nacionalidad','Religión','Instrumentos','Años con SEK','Experiencia acogiendo','Intereses y actividades','Periodos en los que puede acoger (separados por ;)','Observaciones'];
 const sekFrom = v => { const n = norm(v); if(!n) return ''; if(/^no\b|non|^no-sek/.test(n)) return 'No SEK'; return /sek|yes|^s[ií]\b/.test(n) ? 'SEK' : 'No SEK'; };
 function periodFrom(v){
@@ -4181,6 +4185,8 @@ function batchBuild(){
       else if(!data.periodId) out.error = t('Sin periodo');
       out.match = data.name ? matchStudent(data) : '';
       out.same = out.match && staysOf(out.match).find(s=>s.periodId===data.periodId);
+      out.shareRaw = m.share ? String(r[m.share]??'').trim() : '';
+      out.groupCode = m.group ? String(r[m.group]??'').trim().toUpperCase() : '';
     } else {
       if(!data.name) out.error = t('Faltan los apellidos de la familia');
       out.match = data.name ? matchFamily(data) : '';
@@ -4189,9 +4195,21 @@ function batchBuild(){
     return out;
   });
 }
+function batchShareMatches(items){
+  const out = [];
+  items.forEach((x, k)=>{ if(x.error || !x.shareRaw) return;
+    const pool = [...items.map((y, j)=>({key:'r'+j, name:y.data.name, periodId:y.data.periodId, ok:!y.error})).filter(y=>y.ok && y.periodId===x.data.periodId),
+      ...state.students.filter(s=>s.periodId===x.data.periodId && !items.some(y=>!y.error && norm(y.data.name)===norm(s.name))).map(s=>({key:s.id, name:s.name, existing:true}))];
+    splitRequests(x.shareRaw).forEach(q=>{ const b = bestPerson(q, pool, 'r'+k); const hit = b && b.s>=.55 ? pool.find(p=>p.key===b.key) : null;
+      out.push({from:'r'+k, fromName:x.data.name, q, to:hit?hit.key:'', toName:hit?hit.name:'', s:b?b.s:0, existing:!!(hit && hit.existing)}); });
+  });
+  return out;
+}
 function batchPreview(){
   const items = batchBuild(); importCtx.items = items;
   const isFam = importCtx.type==='family';
+  const sm = isFam ? [] : batchShareMatches(items); importCtx.shareMatches = sm;
+  const smOk = sm.filter(x=>x.to), smBad = sm.filter(x=>!x.to);
   const ok = items.filter(x=>!x.error), nNew = ok.filter(x=>!x.match || (!isFam && !x.same)).length, nUpd = ok.length - nNew, nErr = items.length - ok.length;
   const status = x => x.error ? `<span class="tag red">${esc(x.error)}</span>`
     : isFam ? (x.match ? `<span class="tag amber">${t('Actualiza a {n}',{n:esc(famById(x.match)?.name||'')})}</span>` : `<span class="tag green">${t('Nueva')}</span>`)
@@ -4203,18 +4221,31 @@ function batchPreview(){
     <div class="tbl-wrap" style="max-height:46vh;overflow:auto"><table class="tbl"><thead><tr><th>${t('Fila')}</th><th>${isFam?t('Familia'):t('Estudiante')}</th><th>${isFam?t('Correo'):t('Periodo')}</th><th>${t('Estado')}</th><th>${t('Avisos')}</th></tr></thead><tbody>
     ${items.map(x=>`<tr><td>${x.i}</td><td>${esc(x.data.name||'—')}</td><td>${isFam?esc(x.data.email||'—'):esc(periodById(x.data.periodId)?.name||'—')}</td><td>${status(x)}</td><td style="font-size:12.5px">${x.warn.map(esc).join('<br>')}</td></tr>`).join('')}
     </tbody></table></div>
+    ${sm.length?`<h3 style="font-size:16px;margin:16px 0 6px">${t('Comparte alojamiento con')}</h3><p class="muted" style="margin:0 0 8px;font-size:13.5px">${t('Desmarca los que no sean correctos. Se buscan entre las filas del archivo y los alumnos que ya están en la app en el mismo periodo.')}</p>
+      ${smOk.length?`<div class="tbl-wrap" style="max-height:30vh;overflow:auto"><table class="tbl"><thead><tr><th></th><th>${t('Alumno')}</th><th>${t('Escribió')}</th><th>${t('Se entiende')}</th></tr></thead><tbody>
+      ${smOk.map(x=>`<tr><td><input type="checkbox" class="bs_ok" data-i="${sm.indexOf(x)}" checked></td><td>${esc(x.fromName)}</td><td>«${esc(x.q)}»</td><td><b>${esc(x.toName)}</b>${x.s<.85?` <span class="tag amber">${Math.round(x.s*100)}%</span>`:''}${x.existing?` <span class="muted">(${t('ya en la app')})</span>`:''}</td></tr>`).join('')}</tbody></table></div>`:''}
+      ${smBad.length?`<p style="margin:10px 0 4px;font-weight:700">${t('Sin reconocer')}</p><ul style="margin:0;padding-left:18px;font-size:14px">${smBad.map(x=>`<li>${esc(x.fromName)}: «${esc(x.q)}»</li>`).join('')}</ul>`:''}`:''}
   </div>
   <div class="m-foot"><button class="btn" data-act="close">${t('Cancelar')}</button><button class="btn primary" data-act="batchImport" ${ok.length?'':'disabled'}>${pl(ok.length, t('Importar {n} fila'), t('Importar {n} filas'))}</button></div>`;
 }
 function batchImport(){
   const upd = document.getElementById('batchUpdate').checked, isFam = importCtx.type==='family';
   let created = 0, updated = 0, skipped = 0;
-  importCtx.items.filter(x=>!x.error).forEach(x=>{
+  const idOf = {};
+  document.querySelectorAll('.bs_ok').forEach(c=>{ if(!c.checked) importCtx.shareMatches[Number(c.dataset.i)].to = ''; });
+  importCtx.items.forEach((x, k)=>{ if(x.error) return;
     const exists = isFam ? !!x.match : !!x.same;
-    if(exists && !upd){ skipped++; return; }
+    if(exists && !upd){ skipped++; if(!isFam) idOf['r'+k] = x.same.id; return; }
     acceptItem({key:'lote|'+uid(), type:importCtx.type, periodId:x.data.periodId||null, data:x.data, warn:x.warn, match:x.match||''});
     exists ? updated++ : created++;
+    if(!isFam){ const st = state.students.find(s=>s.periodId===x.data.periodId && ((x.data.email && s.email===x.data.email) || norm(s.name)===norm(x.data.name)));
+      if(st){ idOf['r'+k] = st.id; if(x.shareRaw) st.shareRaw = x.shareRaw;
+        if(x.groupCode){ state.groups = state.groups||[]; let g = state.groups.find(gg=>norm(gg.code)===norm(x.groupCode));
+          if(!g){ g = {id:uid(), code:x.groupCode, school:st.school||'', periodId:st.periodId, notes:''}; state.groups.push(g); }
+          st.groupId = g.id; } } }
   });
+  if(!isFam) (importCtx.shareMatches||[]).filter(x=>x.to).forEach(x=>{ const a = stuById(idOf[x.from]), b = stuById(x.existing ? x.to : idOf[x.to]); if(!a || !b || a===b) return;
+    a.shareWith = a.shareWith||[]; b.shareWith = b.shareWith||[]; if(!a.shareWith.includes(b.id)) a.shareWith.push(b.id); if(!b.shareWith.includes(a.id)) b.shareWith.push(a.id); });
   state.importedKeys = (state.importedKeys||[]).filter(k=>!String(k).startsWith('lote|'));
   modal.close(); save(); render();
   toast(t('{c} creados · {u} actualizados · {s} omitidos',{c:created, u:updated, s:skipped}));
@@ -4773,6 +4804,7 @@ document.addEventListener('change', e => { if(e.target.id==='s_dob' || e.target.
   if(store==='shared-go'){ await initShared(); if(ui.askSeed) openSeedAsk(); return; }
   if(migrate()){ syncStays(); save(); } else syncStays(); render();
   setSaved(store==='none' ? t('Sin almacenamiento: los datos se perderán al cerrar') : state.families.length ? t('Datos cargados de este dispositivo') : ''); })();
+
 
 
 
