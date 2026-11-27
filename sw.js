@@ -1,6 +1,6 @@
 /* Service worker de DUB Ministays: permite instalar la app y usarla sin conexión.
    Al publicar una versión nueva de index.html, cambia el número de VERSION. */
-const VERSION = 'ministays-v13';
+const VERSION = 'ministays-v15';
 const SHELL = ['./', './index.html', './manifest.webmanifest', './icon-192.png', './icon-512.png', './icon-maskable-512.png'];
 const LIBS = [
   'https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js',
@@ -21,7 +21,7 @@ self.addEventListener('fetch', e => {
   if (req.method !== 'GET') return;
   if (req.mode === 'navigate') {
     // La app: primero la red (para recibir actualizaciones) y, si no hay conexión, la copia guardada.
-    e.respondWith(fetch(req).then(r => { const copy = r.clone(); caches.open(VERSION).then(c => c.put('./index.html', copy)); return r; })
+    e.respondWith(fetch(req.url, {cache:'no-store', credentials:'same-origin'}).then(r => { const copy = r.clone(); caches.open(VERSION).then(c => c.put('./index.html', copy)); return r; })
       .catch(() => caches.match('./index.html')));
     return;
   }

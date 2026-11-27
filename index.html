@@ -314,6 +314,7 @@ dl.details div{min-width:0} dl.details dt{font-size:12.5px;color:var(--muted);fo
 .share-box label{display:flex;gap:7px;align-items:center;cursor:pointer}
 .house-res .wall{background:linear-gradient(180deg,var(--surface),var(--sunk))}
 .house-res h3::before{content:"";display:inline-block;width:8px;height:8px;border-radius:2px;background:var(--c);margin-right:6px;vertical-align:2px}
+.update-bar{position:fixed;top:14px;left:50%;transform:translateX(-50%);z-index:90;display:flex;gap:14px;align-items:center;padding:10px 12px 10px 18px;border-radius:12px;background:var(--surface);border:1px solid var(--brand);box-shadow:0 10px 30px rgba(0,0,0,.35);font-weight:700}
 </style>
 
 <!--santi-app:inicio-->
@@ -583,6 +584,10 @@ dialog{background:var(--panel);border:1px solid var(--line-2);box-shadow:0 30px 
 <div class="toast" id="toast" role="status"></div>
 <script>
 const EN = {
+'La edad se calcula sola a la fecha de llegada':'The age is calculated automatically at the arrival date','Calculada con la fecha de nacimiento':'Calculated from the date of birth',
+'Rellénala solo si no tienes la fecha de nacimiento':'Only fill this in if you do not have the date of birth','Calculada a la fecha de llegada ({d})':'Calculated at the arrival date ({d})',
+'Calculada a fecha de hoy; se ajustará a la fecha de llegada':'Calculated as of today; it will be adjusted to the arrival date',
+'Hay una versión nueva de la app.':'A new version of the app is available.','Actualizar ahora':'Update now','Versión {n}':'Version {n}',
 'Apellidos':'Surname(s)','Separado automáticamente: compruébalo':'Split automatically: please check','Revisar nombre y apellidos':'Review first name and surname',
 'Estos nombres se han separado automáticamente: los dos últimos términos se han tomado como apellidos. Corrige los que no estén bien y pulsa Guardar.':'These names were split automatically: the last two words were taken as surnames. Correct any that are wrong and click Save.',
 'No hay nombres pendientes de revisar.':'No names left to review.','Guardar':'Save','Nombres revisados':'Names reviewed',
@@ -2148,7 +2153,8 @@ function renderSide(){
     <button data-act="resetAll">${t('Borrar todos los datos')}</button>
     ${store==='shared' ? `<button data-act="teamSettings" style="color:var(--brand);font-weight:700">${t('Equipo: {f} · {n}',{f:esc(dirHandle?dirHandle.name:''), n:esc(userName)})}${syncConflicts.length?` <span class="count" style="background:var(--wait)">${syncConflicts.length}</span>`:''}</button>`
       : (store==='local' && canShare() && lsGet(MODE_KEY)) ? `<button data-act="goTeam">${t('Trabajar en equipo…')}</button>` : ''}
-    <div class="saved" id="saved"></div>`;
+    <div class="saved" id="saved"></div>
+    <div class="saved" style="opacity:.7">${t('Versión {n}',{n:APP_VERSION})}</div>`;
 }
 function previewBanner(){
   if(store!=='none' || ui.hideBanner) return '';
@@ -2725,13 +2731,13 @@ function openStudent(id, base){
     ${nameFields('s', s)}
     <label class="f">${t('Correo')}<input id="s_email" type="email" value="${esc(s.email||'')}"><span class="hint">${t('Sirve para reconocer al alumno cuando responde un formulario')}</span></label>
     <label class="f">${t('Grupo')}<select id="s_group"><option value="">${t('Sin grupo')}</option>${(state.groups||[]).map(g=>`<option value="${g.id}" ${s.groupId===g.id?'selected':''}>${esc(groupLabel(g))}</option>`).join('')}</select></label>
-    <label class="f">${t('Fecha de nacimiento')}<input id="s_dob" type="date" value="${esc(s.dob||'')}"><span class="hint">${t('Si la indicas, la edad se calcula sola a la fecha de llegada')}</span></label>
     <label class="f">${t('Nacionalidad')}<input id="s_nationality" value="${esc(s.nationality||'')}"></label>
     <label class="f">${t('Documento de identidad')}<input id="s_docId" value="${esc(s.docId||'')}" autocomplete="off"><span class="hint">${t('Dato sensible: no sale en listados, CSV ni correos')}</span></label>
     <label class="f">${t('SEK o No SEK')}<select id="s_sek"><option value="">${t('Elige una opción')}</option>${['SEK','No SEK'].map(o=>`<option value="${o}" ${s.sek===o?'selected':''}>${sekLabel(o)}</option>`).join('')}</select></label>
     <label class="f">${t('Curso')}<input id="s_course" list="courses" value="${esc(s.course)}" placeholder="3º ESO"><datalist id="courses">${['1º ESO','2º ESO','3º ESO','4º ESO','1º Bachillerato','2º Bachillerato','Year 9','Year 10','Year 11','Year 12','IB Year 1','IB Year 2'].map(c=>`<option value="${c}">`).join('')}</datalist></label>
     <label class="f full">${t('Nombre del colegio de origen')}<input id="s_school" value="${esc(s.school)}"></label>
-    <label class="f">${t('Edad')}<input id="s_age" type="number" min="5" max="25" value="${esc(s.age)}"></label>
+    <label class="f">${t('Fecha de nacimiento')}<input id="s_dob" type="date" value="${esc(s.dob||'')}"><span class="hint">${t('La edad se calcula sola a la fecha de llegada')}</span></label>
+    <label class="f">${t('Edad')}<input id="s_age" type="number" min="3" max="99" value="${esc(s.dob ? ageAt(s.dob, s.arrival||todayKey()) : s.age)}" ${s.dob?'readonly':''}><span class="hint" id="s_ageHint">${s.dob?t('Calculada con la fecha de nacimiento'):t('Rellénala solo si no tienes la fecha de nacimiento')}</span></label>
     <label class="f">${t('Sexo')}<select id="s_gender">${['chica','chico','otro'].map(g=>`<option value="${g}" ${s.gender===g?'selected':''}>${genderLabel(g)}</option>`).join('')}</select></label>
     <label class="f">${t('País de origen')}<input id="s_country" value="${esc(s.country)}"></label>
     <label class="f">${t('Idioma principal')}<input id="s_language" value="${esc(s.language)}" placeholder="${t('inglés')}"></label>
@@ -3227,7 +3233,8 @@ const studentQuestions = () => [
   ['lastName','Surname(s) / Apellidos','text',true],
   ['name','Full name / Nombre y apellidos','text',false,null,null,true],
   ['email','Email / Correo electrónico','text',true],
-  ['age','Age / Edad','number',true],
+  ['dob','Date of birth / Fecha de nacimiento','date',true],
+  ['age','Age / Edad','number',false,null,null,true],
   ['gender','Sex / Sexo','choice',true,['Girl / Chica','Boy / Chico','Other / Otro']],
   ['country','Country / País','text',true],
   ['language','Main language / Idioma principal','text',true],
@@ -3406,7 +3413,7 @@ function buildItem(r, headers){
   const warn = [];
   if(importCtx.type==='student'){
     const sp = (m.firstName || m.lastName) ? {firstName:s('firstName'), lastName:s('lastName')} : splitName(s('name'));
-    const data = {name:joinName(sp.firstName, sp.lastName) || s('name'), firstName:sp.firstName, lastName:sp.lastName, email:s('email').toLowerCase(), age:Number(s('age'))||'', gender:genderFrom(s('gender')), country:s('country'), language:s('language'),
+    const data = {name:joinName(sp.firstName, sp.lastName) || s('name'), firstName:sp.firstName, lastName:sp.lastName, email:s('email').toLowerCase(), dob:m.dob?importDate(g('dob')):'', age:Number(s('age')) || (m.dob && importDate(g('dob')) ? ageAt(importDate(g('dob'))) : ''), gender:genderFrom(s('gender')), country:s('country'), language:s('language'),
       school:s('school'), sek:m.sek?(isYes(g('sek'))?'SEK':'No SEK'):'', course:s('course'), petAllergy:isYes(g('petAllergy')), foodAllergies:s('foodAllergies'),
       diet:dietFrom(s('diet')), kidsPref:kidsFrom(s('kidsPref')), smokeFree:isYes(g('smokeFree')), priorities:prioFrom(g('priorities')), extendRequested:isYes(g('extend')), notes:s('notes'), interests:m.interests?interestsFromOptions(g('interests')):[], ownRoom:isYes(g('ownRoom')), stayType:m.stayType?stuStayFrom(s('stayType')):''};
     if(!data.name) warn.push(t('Falta el nombre'));
@@ -3519,7 +3526,7 @@ function acceptItem(it){
   const d = it.data;
   if(it.type==='student'){
     if(!periodById(it.periodId)) return false;
-    const fields = {name:d.name, firstName:d.firstName ?? splitName(d.name).firstName, lastName:d.lastName ?? splitName(d.name).lastName, nameAuto:false, email:d.email, age:d.age, gender:d.gender, country:d.country, language:d.language, school:d.school, sek:d.sek, course:d.course,
+    const fields = {name:d.name, firstName:d.firstName ?? splitName(d.name).firstName, lastName:d.lastName ?? splitName(d.name).lastName, nameAuto:false, email:d.email, age:d.age, dob:d.dob||'', gender:d.gender, country:d.country, language:d.language, school:d.school, sek:d.sek, course:d.course,
       petAllergy:d.petAllergy, foodAllergies:d.foodAllergies, diet:d.diet, kidsPref:d.kidsPref, smokeFree:d.smokeFree, priorities:d.priorities, extendRequested:d.extendRequested, notes:d.notes, interests:d.interests||[], ownRoom:!!d.ownRoom, stayType:d.stayType||''};
     const same = it.match && staysOf(it.match).find(s=>s.periodId===it.periodId);
     if(same){ Object.entries(fields).forEach(([k,v])=>{ if(v!=='' && v!=null && !(Array.isArray(v) && !v.length)) same[k] = v; }); if(d.tutorId) same.tutorId = d.tutorId; }
@@ -3654,11 +3661,25 @@ window.addEventListener('beforeinstallprompt', e => { e.preventDefault(); instal
 window.addEventListener('appinstalled', () => { installEvt = null; renderSide(); toast(t('Aplicación instalada')); });
 actions.installApp = async () => { if(!installEvt) return; installEvt.prompt(); try{ await installEvt.userChoice; }catch(e){} installEvt = null; renderSide(); };
 if('serviceWorker' in navigator && /^https?:$/.test(location.protocol) && !window.storage){
-  navigator.serviceWorker.register('sw.js').then(reg => {
+  navigator.serviceWorker.register('sw.js', {updateViaCache:'none'}).then(reg => {
+    const ask = () => showUpdateBar();
+    if(reg.waiting && navigator.serviceWorker.controller) ask();
     reg.addEventListener('updatefound', () => { const nw = reg.installing; if(!nw) return;
-      nw.addEventListener('statechange', () => { if(nw.state==='installed' && navigator.serviceWorker.controller) toast(t('Hay una versión nueva: cierra y vuelve a abrir la aplicación para usarla')); }); });
+      nw.addEventListener('statechange', () => { if(nw.state==='installed' && navigator.serviceWorker.controller) ask(); }); });
+    const check = () => reg.update().catch(()=>{});
+    setInterval(check, 15*60*1000);
+    document.addEventListener('visibilitychange', () => { if(!document.hidden) check(); });
+    window.addEventListener('focus', check);
   }).catch(()=>{});
 }
+const APP_VERSION = 15;
+function showUpdateBar(){
+  if(document.getElementById('updBar')) return;
+  const d = document.createElement('div'); d.id = 'updBar'; d.className = 'update-bar'; d.setAttribute('role','status');
+  d.innerHTML = `<span>${t('Hay una versión nueva de la app.')}</span><button class="btn small primary" data-act="appReload">${t('Actualizar ahora')}</button>`;
+  document.body.appendChild(d);
+}
+actions.appReload = () => location.reload();
 /* ================= Trabajo en equipo: archivo compartido en una carpeta sincronizada ================= */
 const SHARED_FILE = 'acogida-datos.json';
 const COLS = ['families','students','tutors','periods','inbox','monitors','groups','residences'];
@@ -4097,7 +4118,7 @@ Object.assign(actions, {
 document.addEventListener('change', e => { if(e.target.dataset && e.target.dataset.change==='monPeriodFilter'){ ui.monPeriod = e.target.value; render(); } });
 
 /* ================= Carga por lotes (CSV o Excel) ================= */
-const STU_ALIASES = {name:['Nombre y apellidos','Nombre completo','Alumno','Estudiante'], firstName:['Nombre','First name','Name'], lastName:['Apellidos','Apellido','Surname','Surnames'], email:['Correo','Email'], age:['Edad'], gender:['Sexo'], country:['País','Pais'], language:['Idioma principal','Idioma'],
+const STU_ALIASES = {name:['Nombre y apellidos','Nombre completo','Alumno','Estudiante'], firstName:['Nombre','First name','Name'], lastName:['Apellidos','Apellido','Surname','Surnames'], email:['Correo','Email'], dob:['Fecha de nacimiento','DOB','Date of birth','Nacimiento'], age:['Edad'], gender:['Sexo'], country:['País','Pais'], language:['Idioma principal','Idioma'],
   school:['Colegio de origen','Colegio'], sek:['SEK o No SEK','SEK'], course:['Curso'], petAllergy:['Alergia a animales'], foodAllergies:['Alergias alimentarias'], diet:['Dieta'],
   kidsPref:['Niños en la familia'], stayType:['Tipo de estancia','Tipo'], smokeFree:['Casa sin humo'], ownRoom:['Habitación individual'], interests:['Intereses'], priorities:['Prioridades'], notes:['Observaciones']};
 const studentBatchQuestions = () => [...studentQuestions().filter(q=>!['consent','extend'].includes(q[0])).map(q=>{ const c = [...q]; while(c.length<5) c.push(null); c[5] = STU_ALIASES[q[0]]||[]; c[3] = ['firstName'].includes(q[0]); return c; }),
@@ -4105,7 +4126,7 @@ const studentBatchQuestions = () => [...studentQuestions().filter(q=>!['consent'
 const familyBatchQuestions = () => familyQuestions().filter(q=>q[0]!=='consent').map(q=>{ const c = [...q]; while(c.length<6) c.push(null); c[5] = [...(c[5]||[])];
   if(q[0]==='children') c[5].push('Hijos'); if(q[0]==='gender') c[5].push('Acogen a'); if(q[0]==='notes') c[5].push('Observaciones'); if(q[0]==='periods') c[5].push('Periodos en los que puede acoger','Periodos');
   if(q[0]==='capacity') c[5].push('Plazas'); if(q[0]==='diets') c[5].push('Dietas que ofrecen'); if(q[0]==='allergiesOk') c[5].push('Alergias que pueden atender'); if(q[0]==='name') c[5].push('Apellidos'); c[3] = q[0]==='name'; return c; });
-const STU_TEMPLATE = ['Nombre','Apellidos','Correo','Edad','Sexo (chica/chico)','País','Idioma principal','Colegio de origen','SEK o No SEK','Curso','Periodo','Alergia a animales (sí/no)','Alergias alimentarias','Dieta (ninguna/vegetariana/vegana/sin gluten/sin lactosa/halal/kosher)','Tipo de estancia (Ministay/Full Year)','Niños en la familia (sí/no/indiferente)','Casa sin humo (sí/no)','Habitación individual (sí/no)','Intereses (separados por ;)','Prioridades (separadas por ;, la primera es la más importante)','Tutor','Observaciones'];
+const STU_TEMPLATE = ['Nombre','Apellidos','Fecha de nacimiento (dd/mm/aaaa)','Correo','Sexo (chica/chico)','País','Idioma principal','Colegio de origen','SEK o No SEK','Curso','Periodo','Alergia a animales (sí/no)','Alergias alimentarias','Dieta (ninguna/vegetariana/vegana/sin gluten/sin lactosa/halal/kosher)','Tipo de estancia (Ministay/Full Year)','Niños en la familia (sí/no/indiferente)','Casa sin humo (sí/no)','Habitación individual (sí/no)','Intereses (separados por ;)','Prioridades (separadas por ;, la primera es la más importante)','Tutor','Observaciones'];
 const FAM_TEMPLATE = ['Familia (apellidos)','Persona de contacto','Correo','Móvil','Móvil 2','Dirección','Zona','Eircode','Parada de bus','Plazas','Dormitorios de la casa','Habitación del estudiante (individual/compartida/litera)','Camas','Baño propio (sí/no)','Hijos (nombre, chico/chica, dd/mm/aaaa; …)','Otros adultos en casa','Mascotas (sí/no)','Mascotas: detalle','Mascotas: dónde (dentro/fuera/apartadas)','Fumadores (no/fuera/dentro)','Idiomas en casa','Dietas que ofrecen (separadas por ;)','Alergias / intolerancias que pueden atender','Tipo de disponibilidad (Full Year/Ministays/Ambas)','Acogen a (chicos y chicas/solo chicas/solo chicos)','Situación familiar','Profesiones','Nacionalidad','Religión','Instrumentos','Años con SEK','Experiencia acogiendo','Intereses y actividades','Periodos en los que puede acoger (separados por ;)','Observaciones'];
 const sekFrom = v => { const n = norm(v); if(!n) return ''; if(/^no\b|non|^no-sek/.test(n)) return 'No SEK'; return /sek|yes|^s[ií]\b/.test(n) ? 'SEK' : 'No SEK'; };
 function periodFrom(v){
@@ -4739,10 +4760,20 @@ Object.assign(actions, {
       targets.forEach(x=>{ x.firstName = f; x.lastName = l; x.name = joinName(f, l) || x.name; x.nameAuto = false; }); });
     modal.close(); save(); render(); toast(t('Nombres revisados')); }
 });
+/* Edad en vivo a partir de la fecha de nacimiento (ficha del alumno) */
+function refreshStudentAge(){
+  const dob = document.getElementById('s_dob'), age = document.getElementById('s_age'), hint = document.getElementById('s_ageHint'); if(!dob || !age) return;
+  const p = periodById((document.getElementById('s_period')||{}).value);
+  if(dob.value){ age.value = ageAt(dob.value, p ? p.start : todayKey()); age.readOnly = true; if(hint) hint.textContent = p ? t('Calculada a la fecha de llegada ({d})',{d:fmtY(p.start)}) : t('Calculada a fecha de hoy; se ajustará a la fecha de llegada'); }
+  else { age.readOnly = false; if(hint) hint.textContent = t('Rellénala solo si no tienes la fecha de nacimiento'); }
+}
+document.addEventListener('input', e => { if(e.target.id==='s_dob') refreshStudentAge(); });
+document.addEventListener('change', e => { if(e.target.id==='s_dob' || e.target.id==='s_period') refreshStudentAge(); });
 (async () => { await load();
   if(store==='shared-go'){ await initShared(); if(ui.askSeed) openSeedAsk(); return; }
   if(migrate()){ syncStays(); save(); } else syncStays(); render();
   setSaved(store==='none' ? t('Sin almacenamiento: los datos se perderán al cerrar') : state.families.length ? t('Datos cargados de este dispositivo') : ''); })();
+
 
 
 
