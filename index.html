@@ -585,6 +585,14 @@ dialog{background:var(--panel);border:1px solid var(--line-2);box-shadow:0 30px 
 <div class="toast" id="toast" role="status"></div>
 <script>
 const EN = {
+'Monitores duplicados':'Duplicate group leaders','{n} ficha':'{n} record','{n} fichas':'{n} records',
+'Buscar duplicados':'Find duplicates','{n} alumno parece estar duplicado':'{n} student seems to be duplicated','{n} alumnos parecen estar duplicados':'{n} students seem to be duplicated',
+'Mismo nombre o mismo documento en el mismo periodo.':'Same name or same ID document in the same period.','Revisar y fusionar':'Review and merge','Alumnos duplicados':'Duplicate students',
+'Cada bloque es la misma persona dada de alta varias veces en el mismo periodo (mismo nombre o mismo documento). Al fusionar se conserva la ficha más completa, se le añaden los datos que falten de las otras y se mantienen su familia, su grupo y sus compañeros.':'Each block is the same person added several times in the same period (same name or same ID). Merging keeps the most complete record, adds any missing data from the others and keeps their family, group and housemates.',
+'sin grupo':'no group','sin familia':'no family','con documento':'with ID',
+'No hay alumnos duplicados: ningún alumno tiene el mismo nombre o documento que otro en el mismo periodo.':'No duplicate students: no student has the same name or ID as another in the same period.',
+'Alumnos por periodo y grupo':'Students by period and group','Si un periodo tiene más alumnos de los esperados, comprueba aquí si se ha cargado otro grupo en ese periodo.':'If a period has more students than expected, check here whether another group was loaded into it.',
+'Alumnos':'Students','Fusionar los marcados':'Merge ticked','{n} ficha duplicada fusionada':'{n} duplicate record merged','{n} fichas duplicadas fusionadas':'{n} duplicate records merged',
 'Grupo para las filas que no lo indiquen':'Group for rows that do not specify one','Une a todos los alumnos del archivo a ese grupo (y a su periodo, si no indicas otro).':'Links all students in the file to that group (and its period, unless you choose another).',
 'Este archivo parece una «LK Group List».':'This file looks like an “LK Group List”.','Con la carga por lotes los profesores y el LK Leader entrarían como alumnos, y no se crearía el grupo. Usa el importador de listas de grupo.':'With bulk upload, teachers and the LK Leader would be added as students and the group would not be created. Use the group list importer.',
 'Abrir Grupos → Importar lista de grupo (LK)':'Open Groups → Import group list (LK)','Ningún alumno está unido al grupo {c} con estos filtros':'No students linked to group {c} with these filters',
@@ -2258,6 +2266,7 @@ function viewPanel(){
   const noTutor = state.students.filter(s=>s.departure>=todayKey() && !s.tutorId).length;
   const stale = state.families.filter(profileStale).length;
   const autoNames = nameReviewList().length;
+  const dups = [...findDuplicates(), ...findDuplicates(state.monitors||[])].reduce((n,g)=>n+g.length-1,0);
   const exp = Number(p.expected)||0;
 
   return `<div class="head"><div><h1>${t('Periodo en el colegio')}</h1><p>${t('Quién llega, dónde se aloja y qué queda por resolver.')}</p></div>${periodBar()}</div>
@@ -2284,7 +2293,8 @@ function viewPanel(){
       return `<div class="alert-item warn"><p>${t('La familia <b>{f}</b> aún no sabe que acoge a <b>{s}</b>',{f:esc(f.name), s:esc(s.name)})}<small>${fmt(s.arrival)} – ${fmt(s.departure)} · ${f.email?esc(f.email):t('sin correo registrado')}</small></p><button class="btn small primary" data-act="email" data-id="${s.id}">${t('Enviar correo')}</button></div>`; }).join('')}
       ${pn.length>6?`<p class="muted" style="margin:4px 0 0">${t('Y {n} más.',{n:pn.length-6})}</p>`:''}</div>` : ''}
   ${(state.inbox||[]).length ? `<div class="alerts" style="margin-top:8px"><div class="alert-item info"><p>${pl(state.inbox.length, t('{n} respuesta de formulario pendiente de revisar'), t('{n} respuestas de formulario pendientes de revisar'))}</p><button class="btn small primary" data-act="nav" data-id="solicitudes">${t('Ver solicitudes')}</button></div></div>` : ''}
-  ${(pr || noTutor || otherUnassigned || stale || autoNames) ? `<div class="alerts" style="margin-top:8px">
+  ${(pr || noTutor || otherUnassigned || stale || autoNames || dups) ? `<div class="alerts" style="margin-top:8px">
+    ${dups?`<div class="alert-item"><p>${pl(dups, t('{n} alumno parece estar duplicado'), t('{n} alumnos parecen estar duplicados'))}<small>${t('Mismo nombre o mismo documento en el mismo periodo.')}</small></p><button class="btn small primary" data-act="dupOpen">${t('Revisar y fusionar')}</button></div>`:''}
     ${autoNames?`<div class="alert-item warn"><p>${pl(autoNames, t('{n} nombre separado automáticamente en nombre y apellidos'), t('{n} nombres separados automáticamente en nombre y apellidos'))}<small>${t('Revisa que el nombre y los apellidos estén bien separados.')}</small></p><button class="btn small primary" data-act="nameReview">${t('Revisar')}</button></div>`:''}
     ${stale?`<div class="alert-item info"><p>${pl(stale, t('{n} perfil de familia sin revisar en el último año'), t('{n} perfiles de familia sin revisar en el último año'))}</p><button class="btn small" data-act="nav" data-id="familias">${t('Ver familias')}</button></div>`:''}
     ${pr?`<div class="alert-item warn"><p>${pl(pr, t('{n} estancia finalizada sin valorar por el tutor'), t('{n} estancias finalizadas sin valorar por el tutor'))}</p><button class="btn small" data-act="nav" data-id="tutores">${t('Ver tutores')}</button></div>`:''}
@@ -2490,7 +2500,7 @@ function studentRows(){
     <div>${f ? `<button class="btn small" data-act="pick" data-id="${s.id}">${famName(f)}</button>` : `<button class="btn small primary" data-act="pick" data-id="${s.id}">${t('Buscar familia')}</button>`}</div></div>`;}).join('')}</div>`;
 }
 function viewStudents(){
-  return `<div class="head"><div><h1>${t('Estudiantes')}</h1><p>${pl(state.students.length, t('{n} registrado'), t('{n} registrados'))}</p></div><div class="row"><button class="btn" data-act="batchOpen" data-id="student">${t('Cargar lote (CSV o Excel)')}</button><button class="btn primary" data-act="newStudent">${t('Añadir estudiante')}</button></div></div>
+  return `<div class="head"><div><h1>${t('Estudiantes')}</h1><p>${pl(state.students.length, t('{n} registrado'), t('{n} registrados'))}</p></div><div class="row"><button class="btn" data-act="dupOpen">${t('Buscar duplicados')}</button><button class="btn" data-act="batchOpen" data-id="student">${t('Cargar lote (CSV o Excel)')}</button><button class="btn primary" data-act="newStudent">${t('Añadir estudiante')}</button></div></div>
   <div class="toolbar"><input class="search" id="stuSearch" type="search" placeholder="${t('Buscar por nombre, país o colegio')}" value="${esc(ui.stuSearch)}" aria-label="${t('Buscar')}">
   ${(state.groups||[]).length?`<select class="search" style="flex:0 1 220px" data-change="stuGroupFilter" aria-label="${t('Grupo')}"><option value="">${t('Todos los grupos')}</option>${state.groups.map(g=>`<option value="${g.id}" ${ui.stuGroup===g.id?'selected':''}>${esc(groupLabel(g))}</option>`).join('')}</select>`:''}
   <select class="search" style="flex:0 1 260px" data-change="stuPeriodFilter" aria-label="${t('Periodo')}"><option value="">${t('Todos los periodos')}</option>${periodsSorted().map(p=>`<option value="${p.id}" ${ui.stuPeriod===p.id?'selected':''}>${esc(periodLabel(p))}</option>`).join('')}</select>
@@ -3489,7 +3499,7 @@ function buildItem(r, headers){
 function matchStudent(d){
   const byMail = d.email && state.students.find(s=>s.email && s.email.toLowerCase()===d.email);
   if(byMail) return personKey(byMail);
-  const byName = d.name && state.students.find(s=>norm(s.name)===norm(d.name));
+  const byName = d.name && (state.students.find(s=>d.periodId && s.periodId===d.periodId && nameKey(s.name)===nameKey(d.name)) || state.students.find(s=>nameKey(s.name)===nameKey(d.name)));
   return byName ? personKey(byName) : '';
 }
 const matchFamily = d => (d.email && state.families.find(f=>f.email && f.email.toLowerCase()===d.email)?.id) || (d.name && state.families.find(f=>norm(f.name)===norm(d.name))?.id) || '';
@@ -3705,7 +3715,7 @@ if('serviceWorker' in navigator && /^https?:$/.test(location.protocol) && !windo
     window.addEventListener('focus', check);
   }).catch(()=>{});
 }
-const APP_VERSION = 21;
+const APP_VERSION = 22;
 function showUpdateBar(){
   if(document.getElementById('updBar')) return;
   const d = document.createElement('div'); d.id = 'updBar'; d.className = 'update-bar'; d.setAttribute('role','status');
@@ -4223,7 +4233,8 @@ function batchBuild(){
       else if(/^(tbc|tbd|por confirmar|pending)$/i.test(String(data.firstName||data.name).trim()) || /^(tbc|tbd)$/i.test(String(data.lastName||'').trim())) out.error = t('Nombre por confirmar (TBC)');
       else if(!data.periodId) out.error = t('Sin periodo');
       if(m.docId && String(r[m.docId]??'').trim()){ data.docId = String(r[m.docId]).toUpperCase().replace(/\s+/g,''); data.docType = docTypeFrom(m.docType ? r[m.docType] : '', data.docId); }
-      out.match = (data.docId && (state.students.find(x=>x.docId && x.docId===data.docId) ? personKey(state.students.find(x=>x.docId===data.docId)) : '')) || (data.name ? matchStudent(data) : '');
+      { const sp = state.students.find(x=>x.periodId===data.periodId && ((data.docId && idKey(x.docId)===idKey(data.docId)) || (data.name && nameKey(x.name)===nameKey(data.name)))); if(sp) out.match = personKey(sp); }
+      out.match = out.match || (data.docId && (state.students.find(x=>x.docId && x.docId===data.docId) ? personKey(state.students.find(x=>x.docId===data.docId)) : '')) || (data.name ? matchStudent(data) : '');
       out.same = out.match && staysOf(out.match).find(s=>s.periodId===data.periodId);
       out.shareRaw = m.share ? String(r[m.share]??'').trim() : '';
       out.groupCode = m.group ? String(r[m.group]??'').trim().toUpperCase() : '';
@@ -4534,12 +4545,14 @@ function lkImportGo(){
     if(pp.role==='monitor'){
       const wrong = state.students.filter(st=>st.periodId===p.id && (pp.tbc ? /^(tbc|tbd)\b/i.test(String(st.firstName||st.name).trim()) : ((pp.docId && st.docId===pp.docId) || norm(st.name)===norm(pp.name))));
       if(wrong.length){ const ids = new Set(wrong.map(x=>x.id)); state.students = state.students.filter(x=>!ids.has(x.id)); state.students.forEach(x=>{ if(x.shareWith) x.shareWith = x.shareWith.filter(i=>!ids.has(i)); }); nFixed += wrong.length; }
-      const ex = !pp.tbc && state.monitors.find(m=>m.periodId===p.id && ((pp.docId && m.docId===pp.docId) || norm(m.name)===norm(pp.name)));
+      const ex = state.monitors.find(m=>m.periodId===p.id && (pp.tbc ? (m.tbc && m.groupId===g.id && nameKey(m.name)===nameKey(pp.name)) : ((pp.docId && idKey(m.docId)===idKey(pp.docId)) || nameKey(m.name)===nameKey(pp.name))));
       const m = {role:'monitor', ...clean(base), phone:pp.phone, tbc:pp.tbc, smokeFree:true, ownRoom:true};
       if(ex) Object.assign(ex, m); else { state.monitors.push({id:uid(), familyId:null, notes:'', ...m}); nMon++; }
       return;
     }
-    const prev = state.students.find(s=>(pp.docId && s.docId===pp.docId)) || state.students.find(s=>norm(s.name)===norm(pp.name));
+    const samePer = state.students.filter(s=>s.periodId===p.id);
+    const prev = samePer.find(s=>pp.docId && idKey(s.docId)===idKey(pp.docId)) || samePer.find(s=>nameKey(s.name)===nameKey(pp.name)) || samePer.find(s=>simil(s.name, pp.name)>=.92 && (!s.groupId || s.groupId===g.id))
+      || state.students.find(s=>pp.docId && idKey(s.docId)===idKey(pp.docId)) || state.students.find(s=>nameKey(s.name)===nameKey(pp.name));
     const pk = prev ? personKey(prev) : '', same = pk && staysOf(pk).find(s=>s.periodId===p.id);
     if(same){ Object.assign(same, clean(base), {petAllergy:pp.petAllergy, envAllergies:pp.envAllergies, foodAllergies:pp.foodAllergies, diet:pp.diet, medical:pp.medical}); idOf[pp.key] = same.id; nUpd++; }
     else { const n = {id:uid(), familyId:null, sek:prev?.sek||'', course:prev?.course||'', kidsPref:'indiferente', smokeFree:true, notes:'', tutorId:prev?.tutorId||null, ...clean(base), shareWith:[]};
@@ -4958,10 +4971,72 @@ Object.assign(actions, {
     state.students = state.students.filter(x=>x.id!==id); state.students.forEach(x=>{ if(x.shareWith) x.shareWith = x.shareWith.filter(i=>i!==id); });
     if(ui.selected===id) ui.selected = null; modal.close(); save(); render(); toast(t('{n} ahora es monitor',{n:m.name})); }
 });
+/* ================= Duplicados ================= */
+const nameKey = n => hnorm(n);
+const idKey = d => String(d||'').toUpperCase().replace(/[^A-Z0-9]/g,'');
+function findDuplicates(list){
+  const arr = list || state.students, par = new Map(arr.map(s=>[s.id, s.id]));
+  const find = x => { while(par.get(x)!==x) x = par.get(x); return x; };
+  const join = (a,b) => { const ra = find(a), rb = find(b); if(ra!==rb) par.set(rb, ra); };
+  const byKey = new Map();
+  arr.forEach(s=>{ if(!s.periodId) return;
+    const ks = [`n|${s.periodId}|${nameKey(s.name)}`]; if(idKey(s.docId)) ks.push(`d|${s.periodId}|${idKey(s.docId)}`);
+    ks.forEach(k=>{ if(byKey.has(k)) join(byKey.get(k), s.id); else byKey.set(k, s.id); }); });
+  const groups = new Map(); arr.forEach(s=>{ const r = find(s.id); if(!groups.has(r)) groups.set(r, []); groups.get(r).push(s); });
+  return [...groups.values()].filter(g=>g.length>1);
+}
+function completeness(s){ let n = 0; Object.entries(s).forEach(([k,v])=>{ if(!k.startsWith('_') && v!=='' && v!=null && !(Array.isArray(v)&&!v.length)) n++; });
+  return n + (s.familyId?20:0) + (s.groupId?10:0) + (s.shareWith||[]).length*2 + (s.review?10:0) + (s.notified?5:0); }
+function mergeMonitorDuplicates(group){
+  const sorted = [...group].sort((a,b)=>completeness(b)-completeness(a)), keep = sorted[0], drop = sorted.slice(1), dropIds = new Set(drop.map(d=>d.id));
+  drop.forEach(d=>Object.entries(d).forEach(([k,v])=>{ if(k==='id' || k.startsWith('_')) return; const cur = keep[k]; if((cur==='' || cur==null) && !(v==='' || v==null)) keep[k] = clone(v); }));
+  state.monitors = state.monitors.filter(x=>!dropIds.has(x.id)); return drop.length;
+}
+function mergeDuplicates(group){
+  const sorted = [...group].sort((a,b)=>completeness(b)-completeness(a)), keep = sorted[0], drop = sorted.slice(1), dropIds = new Set(drop.map(d=>d.id));
+  drop.forEach(d=>{ Object.entries(d).forEach(([k,v])=>{ if(k==='id' || k.startsWith('_')) return;
+      const cur = keep[k]; if((cur==='' || cur==null || (Array.isArray(cur)&&!cur.length)) && !(v==='' || v==null)) keep[k] = clone(v); });
+    keep.shareWith = [...new Set([...(keep.shareWith||[]), ...(d.shareWith||[])])]; });
+  keep.shareWith = (keep.shareWith||[]).filter(i=>i!==keep.id && !dropIds.has(i));
+  state.students.forEach(x=>{ if(x.shareWith){ x.shareWith = [...new Set(x.shareWith.map(i=>dropIds.has(i)?keep.id:i))].filter(i=>i!==x.id); }
+    if(x.personId && dropIds.has(x.personId)) x.personId = personKey(keep); });
+  state.students = state.students.filter(x=>!dropIds.has(x.id));
+  if(dropIds.has(ui.selected)) ui.selected = keep.id;
+  return drop.length;
+}
+function openDuplicates(){
+  const groups = findDuplicates(), mgroups = findDuplicates(state.monitors||[]);
+  const per = {}; state.students.forEach(s=>{ const p = periodById(s.periodId); if(!p || p.end<todayKey()) return; const k = p.id; per[k] = per[k] || {p, g:{}}; const gk = s.groupId&&groupById(s.groupId) ? groupById(s.groupId).code : t('Sin grupo'); per[k].g[gk] = (per[k].g[gk]||0)+1; });
+  modal.innerHTML = `${mHead(t('Alumnos duplicados'))}
+  <div class="m-body" style="display:block">
+    ${groups.length ? `<div class="notice">${t('Cada bloque es la misma persona dada de alta varias veces en el mismo periodo (mismo nombre o mismo documento). Al fusionar se conserva la ficha más completa, se le añaden los datos que falten de las otras y se mantienen su familia, su grupo y sus compañeros.')}</div>
+      <div class="list" style="margin-top:12px">${groups.map((g,i)=>`<div class="item" style="grid-template-columns:auto 1fr"><input type="checkbox" class="dup_ok" data-i="${i}" checked>
+        <div><b>${esc(g[0].name)}</b> <span class="muted">· ${esc(periodById(g[0].periodId)?.name||'')}</span>
+        <div class="sub">${g.map(s=>`${pl(1,'','')}${s.groupId&&groupById(s.groupId)?esc(groupById(s.groupId).code):t('sin grupo')} · ${s.familyId?esc(famById(s.familyId)?.name||''):t('sin familia')}${s.docId?' · '+t('con documento'):''}`).join(' &nbsp;|&nbsp; ')}</div></div></div>`).join('')}</div>`
+      : `<div class="notice">${t('No hay alumnos duplicados: ningún alumno tiene el mismo nombre o documento que otro en el mismo periodo.')}</div>`}
+    ${mgroups.length?`<h3 style="font-size:16px;margin:18px 0 8px">${t('Monitores duplicados')}</h3><div class="list">${mgroups.map((g,i)=>`<div class="item" style="grid-template-columns:auto 1fr"><input type="checkbox" class="dupm_ok" data-i="${i}" checked><div><b>${esc(g[0].name)}</b> <span class="muted">· ${esc(periodById(g[0].periodId)?.name||'')} · ${pl(g.length, t('{n} ficha'), t('{n} fichas'))}</span></div></div>`).join('')}</div>`:''}
+    <h3 style="font-size:16px;margin:18px 0 8px">${t('Alumnos por periodo y grupo')}</h3>
+    <p class="muted" style="margin:0 0 8px;font-size:13.5px">${t('Si un periodo tiene más alumnos de los esperados, comprueba aquí si se ha cargado otro grupo en ese periodo.')}</p>
+    <div class="tbl-wrap"><table class="tbl"><thead><tr><th>${t('Periodo')}</th><th>${t('Grupo')}</th><th class="num">${t('Alumnos')}</th></tr></thead><tbody>
+      ${Object.values(per).sort((a,b)=>a.p.start.localeCompare(b.p.start)).flatMap(({p,g})=>Object.entries(g).map(([code,n],j)=>`<tr><td>${j?'':`<b>${esc(p.name)}</b>`}</td><td>${esc(code)}</td><td class="num">${n}</td></tr>`)).join('')}
+    </tbody></table></div>
+  </div>
+  <div class="m-foot"><button class="btn" data-act="close">${t('Cerrar')}</button>${groups.length||mgroups.length?`<button class="btn primary" data-act="dupMerge">${t('Fusionar los marcados')}</button>`:''}</div>`;
+  showM();
+}
+Object.assign(actions, {
+  dupOpen: () => openDuplicates(),
+  dupMerge: () => { const groups = findDuplicates(), sel = [...document.querySelectorAll('.dup_ok:checked')].map(c=>groups[Number(c.dataset.i)]).filter(Boolean);
+    let n = 0; sel.forEach(g=>{ n += mergeDuplicates(g); });
+    const mg = findDuplicates(state.monitors||[]); [...document.querySelectorAll('.dupm_ok:checked')].map(c=>mg[Number(c.dataset.i)]).filter(Boolean).forEach(g=>{ n += mergeMonitorDuplicates(g); });
+    modal.close(); save(); render();
+    toast(pl(n, t('{n} ficha duplicada fusionada'), t('{n} fichas duplicadas fusionadas'))); }
+});
 (async () => { await load();
   if(store==='shared-go'){ await initShared(); if(ui.askSeed) openSeedAsk(); return; }
   if(migrate()){ syncStays(); save(); } else syncStays(); render();
   setSaved(store==='none' ? t('Sin almacenamiento: los datos se perderán al cerrar') : state.families.length ? t('Datos cargados de este dispositivo') : ''); })();
+
 
 
 
