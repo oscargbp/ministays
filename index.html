@@ -584,6 +584,11 @@ dialog{background:var(--panel);border:1px solid var(--line-2);box-shadow:0 30px 
 <div class="toast" id="toast" role="status"></div>
 <script>
 const EN = {
+'Periodo no reconocido: {p} → se usa {u}':'Period not recognised: {p} → using {u}','Nombre por confirmar (TBC)':'Name to be confirmed (TBC)',
+'{n} fila con un periodo que no existe en la app':'{n} row with a period that does not exist in the app','{n} filas con un periodo que no existe en la app':'{n} rows with a period that does not exist in the app',
+'Parece que Excel ha ido sumando 1 al número al arrastrar la celda hacia abajo (27, 28, 29…). Corrígelo en el Excel o elige aquí el periodo correcto:':'It looks like Excel added 1 to the number each time the cell was dragged down (27, 28, 29…). Fix it in Excel or choose the correct period here:',
+'Elige el periodo correcto para esas filas:':'Choose the correct period for those rows:','Aplicar a esas filas':'Apply to those rows',
+'Las filas con nombre «TBC» no se importan como alumnos. Si es un monitor por confirmar, créalo en Monitores o importa la lista desde Grupos → Importar lista de grupo (LK).':'Rows named “TBC” are not imported as students. If it is a group leader to be confirmed, create them in Group leaders or import the list from Groups → Import group list (LK).',
 'Tipo de documento':'Document type','DNI o pasaporte (número)':'ID card or passport (number)','Pasaporte':'Passport','Otro':'Other',
 'Desmarca los que no sean correctos. Se buscan entre las filas del archivo y los alumnos que ya están en la app en el mismo periodo.':'Untick any that are wrong. Matches are searched among the rows in the file and the students already in the app for the same period.',
 'ya en la app':'already in the app',
@@ -2047,7 +2052,7 @@ function conflicts(){
 const personKey = st => st.personId || st.id;
 const staysOf = pk => state.students.filter(s=>personKey(s)===pk).sort((a,b)=>a.arrival.localeCompare(b.arrival));
 const pendingReviews = () => state.students.filter(s=>s.familyId && s.familyId!==RES_ID && !s.review && s.departure < todayKey());
-const pendingNotices = () => state.students.filter(s=>s.familyId && s.familyId!==RES_ID && !s.notified && s.departure >= todayKey()).sort((a,b)=>a.arrival.localeCompare(b.arrival));
+const pendingNotices = () => state.students.filter(s=>s.familyId && s.familyId!==RES_ID && famById(s.familyId) && !s.notified && s.departure >= todayKey()).sort((a,b)=>a.arrival.localeCompare(b.arrival));
 function stayStatus(st){ const d = todayKey();
   if(st.departure < d) return `<span class="tag">${t('Finalizada')}</span>`;
   if(st.arrival <= d) return `<span class="tag green">${t('En curso')}</span>`;
@@ -2180,7 +2185,12 @@ function openHelp(){
   <div class="m-foot"><span></span><button class="btn primary" data-act="close">${t('Entendido')}</button></div>`;
   showM();
 }
+function cleanOrphans(){
+  const ids = new Set(state.families.map(f=>f.id));
+  allGuests().forEach(x=>{ if(x.familyId && x.familyId!==RES_ID && !ids.has(x.familyId)){ x.familyId = null; delete x.notified; } });
+}
 function render(){
+  try{ cleanOrphans(); }catch(e){}
   renderSide(); updateSyncStatus();
   if(store==='shared-pending' || (store==='local' && canShare() && !lsGet(MODE_KEY))){ document.getElementById('main').innerHTML = viewSetup(); return; }
   document.getElementById('main').innerHTML = previewBanner() + ({panel:viewPanel, mando:viewDash, asignar:viewAssign, estudiantes:viewStudents, familias:viewFamilies,
@@ -3095,7 +3105,7 @@ const actions = {
     modal.close(); save(); render(); toast(id?t('Estudiante guardado'):t('Estudiante añadido'));
   },
   deleteFamily: (id, el) => { if(!armed(el,t('Pulsa otra vez para eliminar'))) return;
-    state.students.forEach(s=>{ if(s.familyId===id){ s.familyId = null; delete s.notified; } });
+    allGuests().forEach(s=>{ if(s.familyId===id){ s.familyId = null; delete s.notified; } });
     state.families = state.families.filter(f=>f.id!==id); modal.close(); save(); render(); toast(t('Familia eliminada')); },
   deleteStudent: (id, el) => { if(!armed(el,t('Pulsa otra vez para eliminar'))) return;
     state.students = state.students.filter(s=>s.id!==id); if(ui.selected===id) ui.selected = null; modal.close(); save(); render(); toast(t('Estudiante eliminado')); },
@@ -3675,7 +3685,7 @@ if('serviceWorker' in navigator && /^https?:$/.test(location.protocol) && !windo
     window.addEventListener('focus', check);
   }).catch(()=>{});
 }
-const APP_VERSION = 17;
+const APP_VERSION = 19;
 function showUpdateBar(){
   if(document.getElementById('updBar')) return;
   const d = document.createElement('div'); d.id = 'updBar'; d.className = 'update-bar'; d.setAttribute('role','status');
@@ -4182,9 +4192,11 @@ function batchBuild(){
     if(importCtx.type==='student'){
       if(m.sek) data.sek = sekFrom(r[m.sek]);
       data.periodId = (m.period && periodFrom(r[m.period])) || importCtx.periodId || '';
-      if(m.period && r[m.period] && !periodFrom(r[m.period])) out.warn.push(t('Periodo no reconocido: {p}',{p:r[m.period]}));
+      if(m.period && r[m.period] && !periodFrom(r[m.period])){ out.badPeriod = String(r[m.period]).trim();
+        out.warn.push(importCtx.periodId ? t('Periodo no reconocido: {p} → se usa {u}',{p:out.badPeriod, u:periodById(importCtx.periodId)?.name||''}) : t('Periodo no reconocido: {p}',{p:out.badPeriod})); }
       if(m.tutor && r[m.tutor]){ data.tutorId = tutorFrom(r[m.tutor]); if(!data.tutorId) out.warn.push(t('Tutor no encontrado: {n}',{n:r[m.tutor]})); }
       if(!data.name) out.error = t('Falta el nombre');
+      else if(/^(tbc|tbd|por confirmar|pending)$/i.test(String(data.firstName||data.name).trim()) || /^(tbc|tbd)$/i.test(String(data.lastName||'').trim())) out.error = t('Nombre por confirmar (TBC)');
       else if(!data.periodId) out.error = t('Sin periodo');
       if(m.docId && String(r[m.docId]??'').trim()){ data.docId = String(r[m.docId]).toUpperCase().replace(/\s+/g,''); data.docType = docTypeFrom(m.docType ? r[m.docType] : '', data.docId); }
       out.match = (data.docId && (state.students.find(x=>x.docId && x.docId===data.docId) ? personKey(state.students.find(x=>x.docId===data.docId)) : '')) || (data.name ? matchStudent(data) : '');
@@ -4221,6 +4233,14 @@ function batchPreview(){
   modal.innerHTML = `${mHead(t('Resumen de la carga'))}
   <div class="m-body" style="display:block">
     <div class="summary" style="margin-bottom:12px"><div><b>${nNew}</b><span>${isFam?t('familias nuevas'):t('estancias nuevas')}</span></div><div><b>${nUpd}</b><span>${t('se actualizan')}</span></div><div class="${nErr?'alert':''}"><b>${nErr}</b><span>${t('con errores (no se importan)')}</span></div></div>
+    ${(()=>{ if(isFam) return ''; const bad = items.filter(x=>x.badPeriod), tbc = items.filter(x=>x.error===t('Nombre por confirmar (TBC)'));
+      const vals = [...new Set(bad.map(x=>x.badPeriod))];
+      const autofill = vals.length>2 && (()=>{ const m = vals.map(v=>v.match(/^(.*?)(\d+)\s*$/)); return m.every(x=>x && x[1]===m[0][1]) && new Set(m.map(x=>Number(x[2]))).size===vals.length; })();
+      return (bad.length ? `<div class="notice warn" style="margin-bottom:10px"><b>${pl(bad.length, t('{n} fila con un periodo que no existe en la app'), t('{n} filas con un periodo que no existe en la app'))}</b>: ${vals.slice(0,4).map(esc).join(', ')}${vals.length>4?'…':''}.
+          ${autofill?`<br>${t('Parece que Excel ha ido sumando 1 al número al arrastrar la celda hacia abajo (27, 28, 29…). Corrígelo en el Excel o elige aquí el periodo correcto:')}`:`<br>${t('Elige el periodo correcto para esas filas:')}`}
+          <div class="row" style="margin-top:8px"><select id="batchFixPeriod" class="search" style="flex:0 1 360px"><option value="">${t('Elige el periodo')}</option>${periodsSorted().map(p=>`<option value="${p.id}" ${importCtx.periodId===p.id?'selected':''}>${esc(periodLabel(p))}</option>`).join('')}</select>
+          <button class="btn small primary" data-act="batchFixPeriod">${t('Aplicar a esas filas')}</button></div></div>` : '')
+        + (tbc.length ? `<div class="notice" style="margin-bottom:10px">${t('Las filas con nombre «TBC» no se importan como alumnos. Si es un monitor por confirmar, créalo en Monitores o importa la lista desde Grupos → Importar lista de grupo (LK).')}</div>` : ''); })()}
     <label class="row" style="margin-bottom:10px;font-size:14px"><input type="checkbox" id="batchUpdate" checked> ${t('Actualizar los que ya existen con los datos del archivo')}</label>
     <div class="tbl-wrap" style="max-height:46vh;overflow:auto"><table class="tbl"><thead><tr><th>${t('Fila')}</th><th>${isFam?t('Familia'):t('Estudiante')}</th><th>${isFam?t('Correo'):t('Periodo')}</th><th>${t('Estado')}</th><th>${t('Avisos')}</th></tr></thead><tbody>
     ${items.map(x=>`<tr><td>${x.i}</td><td>${esc(x.data.name||'—')}</td><td>${isFam?esc(x.data.email||'—'):esc(periodById(x.data.periodId)?.name||'—')}</td><td>${status(x)}</td><td style="font-size:12.5px">${x.warn.map(esc).join('<br>')}</td></tr>`).join('')}
@@ -4273,6 +4293,7 @@ Object.assign(actions, {
   batchPreview: () => { document.querySelectorAll('[data-map]').forEach(s=>{ importCtx.map[s.dataset.map] = s.value; });
     if(!importCtx.map.name && !importCtx.map.firstName) return formError(t('Une al menos el nombre a una columna.')); batchPreview(); },
   batchImport: () => batchImport(),
+  batchFixPeriod: () => { const v = val('batchFixPeriod'); if(!v) return toast(t('Elige el periodo')); importCtx.periodId = v; batchPreview(); },
   batchTemplate: type => batchTemplate(type)
 });
 document.addEventListener('change', async e => {
@@ -4817,6 +4838,7 @@ document.addEventListener('change', e => { if(e.target.id==='s_dob' || e.target.
   if(store==='shared-go'){ await initShared(); if(ui.askSeed) openSeedAsk(); return; }
   if(migrate()){ syncStays(); save(); } else syncStays(); render();
   setSaved(store==='none' ? t('Sin almacenamiento: los datos se perderán al cerrar') : state.families.length ? t('Datos cargados de este dispositivo') : ''); })();
+
 
 
 
