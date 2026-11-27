@@ -315,6 +315,7 @@ dl.details div{min-width:0} dl.details dt{font-size:12.5px;color:var(--muted);fo
 .house-res .wall{background:linear-gradient(180deg,var(--surface),var(--sunk))}
 .house-res h3::before{content:"";display:inline-block;width:8px;height:8px;border-radius:2px;background:var(--c);margin-right:6px;vertical-align:2px}
 .update-bar{position:fixed;top:14px;left:50%;transform:translateX(-50%);z-index:90;display:flex;gap:14px;align-items:center;padding:10px 12px 10px 18px;border-radius:12px;background:var(--surface);border:1px solid var(--brand);box-shadow:0 10px 30px rgba(0,0,0,.35);font-weight:700}
+.conf-bar{top:auto;bottom:22px;border-color:var(--wait);max-width:min(760px,94vw)}
 </style>
 
 <!--santi-app:inicio-->
@@ -584,6 +585,22 @@ dialog{background:var(--panel);border:1px solid var(--line-2);box-shadow:0 30px 
 <div class="toast" id="toast" role="status"></div>
 <script>
 const EN = {
+'Grupo para las filas que no lo indiquen':'Group for rows that do not specify one','Une a todos los alumnos del archivo a ese grupo (y a su periodo, si no indicas otro).':'Links all students in the file to that group (and its period, unless you choose another).',
+'Este archivo parece una «LK Group List».':'This file looks like an “LK Group List”.','Con la carga por lotes los profesores y el LK Leader entrarían como alumnos, y no se crearía el grupo. Usa el importador de listas de grupo.':'With bulk upload, teachers and the LK Leader would be added as students and the group would not be created. Use the group list importer.',
+'Abrir Grupos → Importar lista de grupo (LK)':'Open Groups → Import group list (LK)','Ningún alumno está unido al grupo {c} con estos filtros':'No students linked to group {c} with these filters',
+'Si sus alumnos ya están en la app pero sin grupo, únelos desde Grupos → «Unir alumnos al grupo».':'If its students are already in the app without a group, link them from Groups → “Link students to group”.',
+'Unir alumnos al grupo':'Link students to group','Convertir en monitor':'Convert to group leader','Adulto: ¿es un monitor?':'Adult: group leader?',
+'{n} profesor que estaba como alumno pasa a monitor':'{n} teacher who was a student is now a group leader','{n} profesores que estaban como alumnos pasan a monitores':'{n} teachers who were students are now group leaders',
+'Unir alumnos al grupo {c}':'Link students to group {c}','Alumnos del periodo del grupo que aún no están unidos a él. Se marcan los que tienen un colegio parecido a «{s}».':"Students in the group's period not yet linked to it. Those with a school similar to “{s}” are ticked.",
+'Marcar todos':'Tick all','Desmarcar todos':'Untick all','Grupo actual':'Current group','No hay alumnos pendientes de unir en el periodo del grupo.':"No students left to link in the group's period.",
+'Unir los marcados':'Link ticked','{n} alumno unido al grupo {c}':'{n} student linked to group {c}','{n} alumnos unidos al grupo {c}':'{n} students linked to group {c}',
+'Pulsa otra vez para convertirlo en monitor':'Click again to convert to group leader','{n} ahora es monitor':'{n} is now a group leader',
+'Recuperar la versión de {n}':'Recover {n}’s version',
+'{n} también cambió esta ficha mientras la editabas. Se han combinado los cambios; en {f} se ha quedado el tuyo (puedes recuperar el suyo en Equipo).':'{n} also changed this record while you were editing it. The changes have been combined; for {f} yours was kept (you can recover theirs in Team).',
+'{n} también cambió esta ficha mientras la editabas. Se han combinado los cambios de los dos.':'{n} also changed this record while you were editing it. Both sets of changes have been combined.',
+'Ver':'View','{n} ha cambiado esta ficha mientras la editabas ({t}).':'{n} changed this record while you were editing it ({t}).',
+'Si guardas, tus cambios sustituirán a los suyos en los campos de este formulario.':'If you save, your changes will replace theirs in the fields of this form.',
+'Guardar mis cambios igualmente':'Save my changes anyway','Descartar los míos y ver su versión':'Discard mine and see their version',
 'Periodo no reconocido: {p} → se usa {u}':'Period not recognised: {p} → using {u}','Nombre por confirmar (TBC)':'Name to be confirmed (TBC)',
 '{n} fila con un periodo que no existe en la app':'{n} row with a period that does not exist in the app','{n} filas con un periodo que no existe en la app':'{n} rows with a period that does not exist in the app',
 'Parece que Excel ha ido sumando 1 al número al arrastrar la celda hacia abajo (27, 28, 29…). Corrígelo en el Excel o elige aquí el periodo correcto:':'It looks like Excel added 1 to the number each time the cell was dragged down (27, 28, 29…). Fix it in Excel or choose the correct period here:',
@@ -2071,6 +2088,7 @@ function needTags(st){
   if(st.envAllergies) r.push(`<span class="tag amber">${t('Alergias ambientales')}</span>`);
   if(st.medical) r.push(`<span class="tag red">${t('Información médica')}</span>`);
   if(st.ownRoom) r.push(`<span class="tag blue">${t('Habitación individual')}</span>`);
+  if(!st.role && Number(st.age)>=18) r.push(`<span class="tag amber">${t('Adulto: ¿es un monitor?')}</span>`);
   if(st.stayType==='full') r.push(`<span class="tag blue">Full Year</span>`);
   if(st.kidsPref==='si') r.push(`<span class="tag blue">${t('Quiere niños en casa')}</span>`);
   if(st.kidsPref==='no') r.push(`<span class="tag blue">${t('Sin niños')}</span>`);
@@ -2463,7 +2481,9 @@ function studentRows(){
   if(ui.stuPeriod) arr = arr.filter(s=>s.periodId===ui.stuPeriod || s.extendPeriodId===ui.stuPeriod);
   if(ui.stuGroup) arr = arr.filter(s=>s.groupId===ui.stuGroup);
   if(q) arr = arr.filter(s=>norm([s.name,s.email,s.country,s.school,s.course,s.sek].join(' ')).includes(q));
-  if(!arr.length) return emptyBox(t('No hay estudiantes que mostrar'), t('Cambia el filtro o añade un estudiante nuevo.'));
+  if(!arr.length){ const g = ui.stuGroup && groupById(ui.stuGroup);
+    return g ? emptyBox(t('Ningún alumno está unido al grupo {c} con estos filtros',{c:esc(g.code)}), t('Si sus alumnos ya están en la app pero sin grupo, únelos desde Grupos → «Unir alumnos al grupo».'), `<button class="btn primary" data-act="groupLink" data-id="${g.id}">${t('Unir alumnos al grupo')}</button>`)
+      : emptyBox(t('No hay estudiantes que mostrar'), t('Cambia el filtro o añade un estudiante nuevo.')); }
   return `<div class="list">${arr.map(s=>{ const f = famById(s.familyId);
     return `<div class="item"><div><button class="name" data-act="editStudent" data-id="${s.id}">${esc(s.name)}</button><div class="sub">${s.groupId&&groupById(s.groupId)?`<b>${esc(groupById(s.groupId).code)}</b> · `:''}${t('{n} años',{n:esc(s.age)})} · ${esc(s.country||'')} · ${periodById(s.periodId)?esc(periodById(s.periodId).name)+' · ':''}${fmt(s.arrival)} – ${fmt(s.departure)}</div>${schoolLine(s)?`<div class="sub">${schoolLine(s)}</div>`:''}</div>
     <div class="tags">${visitTag(s)}${sekTag(s)}${needTags(s)}</div>
@@ -2773,7 +2793,7 @@ function openStudent(id, base){
     <label class="f full">${t('Observaciones')}<textarea id="s_notes">${esc(s.notes)}</textarea></label>
     <p class="err" id="formErr" hidden></p>
   </div>
-  <div class="m-foot">${id?`<button class="btn danger" data-act="deleteStudent" data-id="${id}">${t('Eliminar estudiante')}</button>`:'<span></span>'}
+  <div class="m-foot">${id?`<div class="row"><button class="btn danger" data-act="deleteStudent" data-id="${id}">${t('Eliminar estudiante')}</button><button class="btn" data-act="stuToMonitor" data-id="${id}">${t('Convertir en monitor')}</button></div>`:'<span></span>'}
     <div class="row">${id?`<button class="btn" data-act="stuHistory" data-id="${id}">${t('Ver histórico')}</button>`:''}<button class="btn" data-act="close">${t('Cancelar')}</button><button class="btn primary" data-act="saveStudent" data-id="${id||''}">${t('Guardar estudiante')}</button></div></div>`;
   showM(); document.getElementById('s_first').focus();
 }
@@ -3427,7 +3447,7 @@ function buildItem(r, headers){
   if(importCtx.type==='student'){
     const sp = (m.firstName || m.lastName) ? {firstName:s('firstName'), lastName:s('lastName')} : splitName(s('name'));
     const data = {name:joinName(sp.firstName, sp.lastName) || s('name'), firstName:sp.firstName, lastName:sp.lastName, email:s('email').toLowerCase(), dob:m.dob?importDate(g('dob')):'', age:Number(s('age')) || (m.dob && importDate(g('dob')) ? ageAt(importDate(g('dob'))) : ''), gender:genderFrom(s('gender')), country:s('country'), language:s('language'),
-      school:s('school'), sek:m.sek?(isYes(g('sek'))?'SEK':'No SEK'):'', course:s('course'), petAllergy:isYes(g('petAllergy')), foodAllergies:s('foodAllergies'),
+      school:s('school'), sek:m.sek?(isYes(g('sek'))?'SEK':'No SEK'):'', course:s('course'), ...splitAllergies(s('foodAllergies'), isYes(g('petAllergy'))),
       diet:dietFrom(s('diet')), kidsPref:kidsFrom(s('kidsPref')), smokeFree:isYes(g('smokeFree')), priorities:prioFrom(g('priorities')), extendRequested:isYes(g('extend')), notes:s('notes'), interests:m.interests?interestsFromOptions(g('interests')):[], ownRoom:isYes(g('ownRoom')), stayType:m.stayType?stuStayFrom(s('stayType')):''};
     if(!data.name) warn.push(t('Falta el nombre'));
     if(!data.email) warn.push(t('Falta el correo'));
@@ -3685,7 +3705,7 @@ if('serviceWorker' in navigator && /^https?:$/.test(location.protocol) && !windo
     window.addEventListener('focus', check);
   }).catch(()=>{});
 }
-const APP_VERSION = 19;
+const APP_VERSION = 21;
 function showUpdateBar(){
   if(document.getElementById('updBar')) return;
   const d = document.createElement('div'); d.id = 'updBar'; d.className = 'update-bar'; d.setAttribute('role','status');
@@ -3772,7 +3792,7 @@ function detectConflicts(local, remote){
       if(mine && theirs && stripMeta(l) !== stripMeta(r)){
         const lost = (l._u||0) > (r._u||0) ? r : l;
         syncConflicts.unshift({col:c, id:l.id, label:recLabel(c,l), other:r._by, at:Date.now(), lostMine:lost===l, lost:clone(lost)});
-        toast(t('{n} también ha cambiado «{r}». Se ha quedado la versión más reciente.',{n:r._by, r:recLabel(c,l)}));
+        conflictBar(t('{n} también ha cambiado «{r}». Se ha quedado la versión más reciente.',{n:r._by, r:recLabel(c,l)}));
       } });
   });
   COLS.forEach(c=>{
@@ -3780,7 +3800,7 @@ function detectConflicts(local, remote){
     (remote.cols[c]||[]).forEach(r=>{ const b = bm.get(r.id), l = lm.get(r.id); if(!b || !l) return;
       if(b._by===userName && r._by && r._by!==userName && (r._u||0) > (b._u||0) && (l._u||0)===(b._u||0) && (r._base||0)!==(b._u||0) && stripMeta(b)!==stripMeta(r)){
         syncConflicts.unshift({col:c, id:r.id, label:recLabel(c,r), other:r._by, at:Date.now(), lostMine:true, lost:clone(b)});
-        toast(t('{n} también ha cambiado «{r}». Se ha quedado la versión más reciente.',{n:r._by, r:recLabel(c,r)}));
+        conflictBar(t('{n} también ha cambiado «{r}». Se ha quedado la versión más reciente.',{n:r._by, r:recLabel(c,r)}));
       } });
   });
   syncConflicts = syncConflicts.slice(0,20);
@@ -3893,7 +3913,7 @@ function openTeamSettings(){
     <div class="row" style="margin:10px 0 18px"><button class="btn" data-act="saveTeamName">${t('Guardar nombre')}</button><button class="btn" data-act="syncNowBtn">${t('Sincronizar ahora')}</button></div>
     <h3 style="font-size:16px;margin:0 0 8px">${t('Cambios que coincidieron con otra persona')}</h3>
     ${syncConflicts.length ? `<div class="list">${syncConflicts.map((c,i)=>`<div class="item" style="grid-template-columns:1fr auto"><div><b>${esc(c.label)}</b><div class="sub">${c.lostMine ? t('{n} lo cambió después que tú; se ha quedado su versión.',{n:esc(c.other)}) : t('Lo cambiaste después que {n}; se ha quedado tu versión.',{n:esc(c.other)})} · ${ago(c.at)}</div></div>
-      ${c.lostMine ? `<button class="btn small" data-act="restoreMine" data-id="${i}">${t('Recuperar mi versión')}</button>` : '<span></span>'}</div>`).join('')}</div>`
+      <button class="btn small" data-act="restoreMine" data-id="${i}">${c.lostMine ? t('Recuperar mi versión') : t('Recuperar la versión de {n}',{n:esc(c.other)})}</button></div>`).join('')}</div>`
       : `<p class="muted">${t('No ha habido coincidencias en esta sesión.')}</p>`}
     <p class="muted" style="font-size:13.5px;margin-top:16px">${t('Cada día se guarda una copia automática en la subcarpeta «copias». SharePoint también guarda el historial de versiones del archivo.')}</p>
   </div>
@@ -4163,6 +4183,7 @@ function openBatch(type){
     <div class="notice">${isFam ? t('Sube un CSV o un Excel con una familia por fila. Las que ya existen (mismo correo o mismos apellidos) se actualizan; las nuevas se crean. Antes de guardar verás un resumen.') : t('Sube un CSV o un Excel con un estudiante por fila. Si un estudiante ya existe (mismo correo o mismo nombre), se le añade la estancia del periodo o se actualiza la que ya tiene. Antes de guardar verás un resumen.')}</div>
     <div class="row" style="margin:12px 0"><button class="btn" data-act="batchTemplate" data-id="${type}">${t('Descargar plantilla')}</button>
       <button class="btn primary" data-act="batchPick">${t('Elegir archivo CSV o Excel')}</button><input type="file" id="batchFileIn" accept=".xlsx,.xls,.csv,.txt" hidden></div>
+    ${isFam || !(state.groups||[]).length ? '' : `<label class="f full" style="margin-bottom:12px">${t('Grupo para las filas que no lo indiquen')}<select id="batchGroup"><option value="">${t('Sin grupo')}</option>${state.groups.map(g=>`<option value="${g.id}">${esc(groupLabel(g))}</option>`).join('')}</select><span class="hint">${t('Une a todos los alumnos del archivo a ese grupo (y a su periodo, si no indicas otro).')}</span></label>`}
     ${isFam ? '' : `<label class="f full" style="margin-bottom:12px">${t('Periodo para las filas que no lo indiquen')}<select id="batchPeriod"><option value="">${t('Sin periodo por defecto')}</option>${periodsSorted().filter(p=>p.end>=todayKey()).map(p=>`<option value="${p.id}">${esc(periodLabel(p))}</option>`).join('')}</select></label>`}
     <label class="f full">${t('O copia en Excel las filas (con la fila de títulos) y pégalas aquí')}<textarea id="batchPaste" class="mail-body" style="min-height:120px;font-family:ui-monospace,Consolas,monospace;font-size:12.5px"></textarea></label>
     <p class="muted" style="font-size:13px;margin:8px 0 0">${isFam ? t('Hijos en una sola celda: «Nombre, chico/chica, fecha de nacimiento», separados por punto y coma. En un Excel también puedes ponerlos en una hoja llamada «Hijos».') : t('El periodo puede ser su nombre o una fecha que caiga dentro. Los valores de sí/no admiten «sí», «no», «yes» o «no».')}</p>
@@ -4172,12 +4193,15 @@ function openBatch(type){
   showM();
 }
 function batchMapping(rows){
+  { const gs = document.getElementById('batchGroup'); if(gs){ importCtx.groupId = gs.value; const g = groupById(gs.value); const ps = document.getElementById('batchPeriod'); if(g && g.periodId && ps && !ps.value) ps.value = g.periodId; } }
   if(!rows.length) return formError(t('No se ha encontrado ninguna fila con respuestas.'));
   const sel = document.getElementById('batchPeriod'); if(sel) importCtx.periodId = sel.value;
   const headers = Object.keys(rows[0]), qs = importCtx.type==='family' ? familyBatchQuestions() : studentBatchQuestions();
   importCtx.rows = rows; importCtx.map = autoMap(headers, qs);
   modal.innerHTML = `${mHead(t('Comprobar columnas'))}
   <div class="m-body" style="display:block">
+    ${importCtx.type==='student' && looksLikeLK(rows) ? `<div class="notice warn" style="margin-bottom:10px"><b>${t('Este archivo parece una «LK Group List».')}</b> ${t('Con la carga por lotes los profesores y el LK Leader entrarían como alumnos, y no se crearía el grupo. Usa el importador de listas de grupo.')}
+      <div class="row" style="margin-top:8px"><button class="btn small primary" data-act="lkImport">${t('Abrir Grupos → Importar lista de grupo (LK)')}</button></div></div>` : ''}
     <div class="notice">${pl(rows.length, t('{n} fila leída.'), t('{n} filas leídas.'))} ${t('Revisa que cada dato esté unido a su columna del Excel.')}</div>
     <div class="tbl-wrap"><table class="tbl"><thead><tr><th>${t('Dato')}</th><th>${t('Columna del Excel')}</th></tr></thead><tbody>
     ${qs.map(([k,title,,req])=>`<tr><td>${esc(title.split(' / ')[lang==='en'?0:1]||title)}${req?' *':''}</td><td><select data-map="${k}" class="search" style="max-width:none;width:100%"><option value="">${t('— No importar —')}</option>${headers.map(h=>`<option ${importCtx.map[k]===h?'selected':''}>${esc(h)}</option>`).join('')}</select></td></tr>`).join('')}
@@ -4266,7 +4290,8 @@ function batchImport(){
       if(st){ idOf['r'+k] = st.id; if(x.shareRaw) st.shareRaw = x.shareRaw;
         if(x.groupCode){ state.groups = state.groups||[]; let g = state.groups.find(gg=>norm(gg.code)===norm(x.groupCode));
           if(!g){ g = {id:uid(), code:x.groupCode, school:st.school||'', periodId:st.periodId, notes:''}; state.groups.push(g); }
-          st.groupId = g.id; } } }
+          st.groupId = g.id; }
+        else if(importCtx.groupId && groupById(importCtx.groupId)){ const g = groupById(importCtx.groupId); st.groupId = g.id; if(g.school) st.school = g.school; } } }
   });
   if(!isFam) (importCtx.shareMatches||[]).filter(x=>x.to).forEach(x=>{ const a = stuById(idOf[x.from]), b = stuById(x.existing ? x.to : idOf[x.to]); if(!a || !b || a===b) return;
     a.shareWith = a.shareWith||[]; b.shareWith = b.shareWith||[]; if(!a.shareWith.includes(b.id)) a.shareWith.push(b.id); if(!b.shareWith.includes(a.id)) b.shareWith.push(a.id); });
@@ -4346,7 +4371,7 @@ function viewGroups(){
       if(fams.every(x=>!x)) return `<span class="tag red">${t('Sin familia')}</span>`; return `<span class="tag amber">${t('Separados')}</span>`; };
     return `<div class="panel" style="margin-bottom:14px"><div class="row" style="justify-content:space-between"><div><h3 style="font-size:18px">${esc(g.code)} <span class="muted" style="font-weight:400;font-size:15px">· ${esc(g.school||'')}</span></h3>
         <span class="muted" style="font-size:13.5px">${p?esc(periodLabel(p)):t('Sin periodo')}</span></div>
-      <div class="row"><button class="btn small" data-act="groupStudents" data-id="${g.id}">${t('Ver alumnos')}</button><button class="btn small" data-act="editGroup" data-id="${g.id}">${t('Editar')}</button></div></div>
+      <div class="row"><button class="btn small" data-act="groupLink" data-id="${g.id}">${t('Unir alumnos al grupo')}</button><button class="btn small" data-act="groupStudents" data-id="${g.id}">${t('Ver alumnos')}</button><button class="btn small" data-act="editGroup" data-id="${g.id}">${t('Editar')}</button></div></div>
       <div class="summary" style="margin-top:12px"><div><b>${studs.length}</b><span>${t('alumnos')}</span></div><div class="${studs.some(s=>!s.familyId)?'alert':''}"><b>${studs.filter(s=>!s.familyId).length}</b><span>${t('sin familia')}</span></div>
         <div><b>${mons.length}</b><span>${t('monitores')}${mons.some(m=>m.tbc)?' · '+t('{n} por confirmar',{n:mons.filter(m=>m.tbc).length}):''}</span></div><div class="${mons.some(m=>!m.familyId)?'alert':''}"><b>${mons.filter(m=>!m.familyId).length}</b><span>${t('monitores sin familia')}</span></div>
         <div class="${split?'alert':''}"><b>${subs.filter(x=>x.length>1).length}</b><span>${t('subgrupos de convivencia')}${split?' · '+t('{n} separados',{n:split}):''}</span></div></div>
@@ -4500,13 +4525,15 @@ function lkImportGo(){
   state.groups = state.groups || []; state.monitors = state.monitors || [];
   let g = state.groups.find(x=>norm(x.code)===norm(code));
   if(!g){ g = {id:uid(), code, school, periodId:p.id, notes:''}; state.groups.push(g); } else { g.school = school || g.school; g.periodId = p.id; }
-  const idOf = {}; let nNew = 0, nUpd = 0, nMon = 0;
+  const idOf = {}; let nNew = 0, nUpd = 0, nMon = 0, nFixed = 0;
   lkCtx.people.forEach(pp=>{
     const base = {name:pp.name, firstName:pp.firstName, lastName:pp.lastName, nameAuto:false, docId:pp.docId, docType:docTypeFrom('', pp.docId), nationality:pp.nationality, gender:pp.gender, dob:pp.dob, petAllergy:pp.petAllergy, envAllergies:pp.envAllergies,
       foodAllergies:pp.foodAllergies, diet:pp.diet, medical:pp.medical, school:school || pp.schoolRaw, schoolRaw:pp.schoolRaw, groupId:g.id, periodId:p.id, arrival:p.start, departure:p.end};
     if(pp.country) base.country = pp.country; if(pp.language) base.language = pp.language;
     const clean = o => Object.fromEntries(Object.entries(o).filter(([,v])=>v!=='' && v!=null));
     if(pp.role==='monitor'){
+      const wrong = state.students.filter(st=>st.periodId===p.id && (pp.tbc ? /^(tbc|tbd)\b/i.test(String(st.firstName||st.name).trim()) : ((pp.docId && st.docId===pp.docId) || norm(st.name)===norm(pp.name))));
+      if(wrong.length){ const ids = new Set(wrong.map(x=>x.id)); state.students = state.students.filter(x=>!ids.has(x.id)); state.students.forEach(x=>{ if(x.shareWith) x.shareWith = x.shareWith.filter(i=>!ids.has(i)); }); nFixed += wrong.length; }
       const ex = !pp.tbc && state.monitors.find(m=>m.periodId===p.id && ((pp.docId && m.docId===pp.docId) || norm(m.name)===norm(pp.name)));
       const m = {role:'monitor', ...clean(base), phone:pp.phone, tbc:pp.tbc, smokeFree:true, ownRoom:true};
       if(ex) Object.assign(ex, m); else { state.monitors.push({id:uid(), familyId:null, notes:'', ...m}); nMon++; }
@@ -4514,7 +4541,7 @@ function lkImportGo(){
     }
     const prev = state.students.find(s=>(pp.docId && s.docId===pp.docId)) || state.students.find(s=>norm(s.name)===norm(pp.name));
     const pk = prev ? personKey(prev) : '', same = pk && staysOf(pk).find(s=>s.periodId===p.id);
-    if(same){ Object.assign(same, clean(base)); idOf[pp.key] = same.id; nUpd++; }
+    if(same){ Object.assign(same, clean(base), {petAllergy:pp.petAllergy, envAllergies:pp.envAllergies, foodAllergies:pp.foodAllergies, diet:pp.diet, medical:pp.medical}); idOf[pp.key] = same.id; nUpd++; }
     else { const n = {id:uid(), familyId:null, sek:prev?.sek||'', course:prev?.course||'', kidsPref:'indiferente', smokeFree:true, notes:'', tutorId:prev?.tutorId||null, ...clean(base), shareWith:[]};
       if(pk) n.personId = pk; state.students.push(n); idOf[pp.key] = n.id; nNew++; }
   });
@@ -4522,7 +4549,7 @@ function lkImportGo(){
   lkCtx.matches.filter(m=>m.ok && idOf[m.from] && idOf[m.to]).forEach(m=>{ const a = stuById(idOf[m.from]), b = stuById(idOf[m.to]);
     if(!a.shareWith.includes(b.id)) a.shareWith.push(b.id); b.shareWith = b.shareWith||[]; if(!b.shareWith.includes(a.id)) b.shareWith.push(a.id); });
   syncStays(); modal.close(); ui.view = 'grupos'; save(); render();
-  toast(t('Grupo {c}: {n} alumnos nuevos, {u} actualizados, {m} monitores',{c:code, n:nNew, u:nUpd, m:nMon}));
+  toast(t('Grupo {c}: {n} alumnos nuevos, {u} actualizados, {m} monitores',{c:code, n:nNew, u:nUpd, m:nMon}) + (nFixed ? ' · ' + pl(nFixed, t('{n} profesor que estaba como alumno pasa a monitor'), t('{n} profesores que estaban como alumnos pasan a monitores')) : ''));
 }
 
 /* --- Exportar CSV con o sin datos sensibles --- */
@@ -4557,7 +4584,7 @@ Object.assign(actions, {
 document.addEventListener('change', async e => {
   if(e.target.id==='lkFileIn'){ const file = e.target.files[0]; e.target.value = ''; if(!file) return;
     try{ lkReview(await readSheetRows(file)); }catch(err){ formError(err.message || t('No se ha podido leer el archivo.')); } }
-  if(e.target.dataset && e.target.dataset.change==='stuGroupFilter'){ ui.stuGroup = e.target.value; document.getElementById('stuRows').innerHTML = studentRows(); }
+  if(e.target.dataset && e.target.dataset.change==='stuGroupFilter'){ ui.stuGroup = e.target.value; const g = groupById(ui.stuGroup); if(g && g.periodId) ui.stuPeriod = g.periodId; render(); }
 });
 
 /* ================= Asignar por subgrupos de convivencia ================= */
@@ -4834,10 +4861,108 @@ function refreshStudentAge(){
 }
 document.addEventListener('input', e => { if(e.target.id==='s_dob') refreshStudentAge(); });
 document.addEventListener('change', e => { if(e.target.id==='s_dob' || e.target.id==='s_period') refreshStudentAge(); });
+
+/* ================= Avisos de edición simultánea (modo equipo) ================= */
+function conflictBar(msg){
+  let d = document.getElementById('confBar');
+  if(!d){ d = document.createElement('div'); d.id = 'confBar'; d.className = 'update-bar conf-bar'; d.setAttribute('role','alert'); document.body.appendChild(d); }
+  d.innerHTML = `<span>${esc(msg)}</span><button class="btn small" data-act="confBarSee">${t('Ver')}</button><button class="icon-btn" data-act="confBarClose" aria-label="${t('Cerrar')}">✕</button>`;
+}
+const EDIT_COLS = {openFamily:'families', openStudent:'students', openMonitor:'monitors', openTutor:'tutors', openGroup:'groups'};
+let editing = null;
+function markEditing(col, id){
+  const r = id && (state[col]||[]).find(x=>x.id===id);
+  editing = r ? {col, id, u:r._u||0, snap:clone(r)} : null;
+}
+const _openFamily = openFamily; openFamily = function(id, ...a){ markEditing('families', id); return _openFamily(id, ...a); };
+const _openStudent = openStudent; openStudent = function(id, ...a){ markEditing('students', id); return _openStudent(id, ...a); };
+const _openMonitor = openMonitor; openMonitor = function(id, ...a){ markEditing('monitors', id); return _openMonitor(id, ...a); };
+const _openTutor = openTutor; openTutor = function(id, ...a){ markEditing('tutors', id); return _openTutor(id, ...a); };
+const _openGroup = openGroup; openGroup = function(id, ...a){ markEditing('groups', id); return _openGroup(id, ...a); };
+const META_KEYS = new Set(['_u','_by','_base']);
+const fieldLabel = k => ({name:t('Nombre'), firstName:t('Nombre'), lastName:t('Apellidos'), phone:t('Teléfono'), phone2:t('Teléfono 2'), email:t('Correo'), notes:t('Notas internas'),
+  capacity:t('Plazas'), address:t('Dirección'), ranges:t('Disponibilidad'), familyId:t('Familia'), periodId:t('Periodo'), tutorId:t('Tutor de seguimiento')})[k] || k;
+['saveFamily','saveStudent','saveMonitor','saveTutor','saveGroup'].forEach(k=>{
+  const orig = actions[k]; if(!orig) return;
+  actions[k] = async (id, el) => {
+    const ed = editing && id && editing.id===id ? editing : null;
+    let theirs = null;
+    if(store==='shared' && ed){
+      try{ await syncNow(); }catch(e){}
+      const rec = (state[ed.col]||[]).find(x=>x.id===id);
+      if(rec && (rec._u||0) > ed.u && rec._by && rec._by!==userName) theirs = clone(rec);
+    }
+    const r = orig(id, el);
+    if(theirs){
+      const now = (state[ed.col]||[]).find(x=>x.id===id);
+      if(now){
+        const same = (a,b) => JSON.stringify(a??null)===JSON.stringify(b??null), snap = ed.snap;
+        const keys = [...new Set([...Object.keys(snap), ...Object.keys(now), ...Object.keys(theirs)])].filter(x=>!META_KEYS.has(x));
+        const mine = keys.filter(x=>!same(now[x], snap[x])), their = keys.filter(x=>!same(theirs[x], snap[x]));
+        const keep = their.filter(x=>!mine.includes(x)), clash = their.filter(x=>mine.includes(x) && !same(now[x], theirs[x]));
+        keep.forEach(x=>{ now[x] = clone(theirs[x]); });
+        if(clash.length) syncConflicts.unshift({col:ed.col, id, label:recLabel(ed.col, now), other:theirs._by, at:Date.now(), lostMine:false, lost:theirs});
+        save(); render();
+        conflictBar(clash.length
+          ? t('{n} también cambió esta ficha mientras la editabas. Se han combinado los cambios; en {f} se ha quedado el tuyo (puedes recuperar el suyo en Equipo).',{n:theirs._by, f:clash.map(fieldLabel).join(', ')})
+          : t('{n} también cambió esta ficha mientras la editabas. Se han combinado los cambios de los dos.',{n:theirs._by}));
+      }
+    }
+    editing = null; return r;
+  };
+});
+Object.assign(actions, {
+  confBarSee: () => { document.getElementById('confBar')?.remove(); openTeamSettings(); },
+  confBarClose: () => document.getElementById('confBar')?.remove()
+});
+
+/* ---- Alergias: alimentarias, ambientales y animales ---- */
+function splitAllergies(txt, pet){
+  const parts = splitMulti(txt), food = [], env = []; let p = !!pet;
+  parts.forEach(a=>{ const n = norm(a); if(/\bcat\b|\bdog\b|gato|perro|animal|pet\b|mascota/.test(n)) p = true;
+    if(Object.values(ALLERGY_RX).some(rx=>rx.test(n))) food.push(a); else env.push(a); });
+  return {foodAllergies:food.join('; '), envAllergies:env.join('; '), petAllergy:p};
+}
+/* ---- ¿Es una LK Group List? ---- */
+function looksLikeLK(rows){
+  const keys = Object.keys(rows[0]||{}).map(hnorm), first = rows.map(r=>String(Object.values(r)[0]||''));
+  return (keys.includes('surname') && keys.includes('name')) || first.some(v=>/^(teacher|lk leader|student\s*\d)/i.test(v.trim()));
+}
+/* ---- Unir alumnos existentes a un grupo ---- */
+function openGroupLink(gid){
+  const g = groupById(gid), cand = state.students.filter(s=>(!g.periodId || s.periodId===g.periodId) && s.groupId!==g.id)
+    .map(s=>({s, sc: s.school && g.school ? simil(s.school, g.school) : 0})).sort((a,b)=>b.sc-a.sc || a.s.name.localeCompare(b.s.name));
+  modal.innerHTML = `${mHead(t('Unir alumnos al grupo {c}',{c:esc(g.code)}))}
+  <div class="m-body" style="display:block">
+    <div class="notice">${t('Alumnos del periodo del grupo que aún no están unidos a él. Se marcan los que tienen un colegio parecido a «{s}».',{s:esc(g.school||'')})}</div>
+    ${cand.length?`<div class="row" style="margin:10px 0"><button class="btn small" data-act="glAll">${t('Marcar todos')}</button><button class="btn small" data-act="glNone">${t('Desmarcar todos')}</button></div>
+    <div class="tbl-wrap" style="max-height:50vh;overflow:auto"><table class="tbl"><thead><tr><th></th><th>${t('Alumno')}</th><th>${t('Colegio de origen')}</th><th>${t('Grupo actual')}</th></tr></thead><tbody>
+      ${cand.map(({s,sc})=>`<tr><td><input type="checkbox" class="gl_ok" value="${s.id}" ${sc>=.45 && !(Number(s.age)>=18) ? 'checked':''}></td><td>${esc(s.name)}${Number(s.age)>=18?` <span class="tag amber">${t('Adulto: ¿es un monitor?')}</span>`:''}</td><td>${esc(s.school||'—')}</td><td>${s.groupId&&groupById(s.groupId)?esc(groupById(s.groupId).code):'—'}</td></tr>`).join('')}</tbody></table></div>` : `<p class="muted">${t('No hay alumnos pendientes de unir en el periodo del grupo.')}</p>`}
+  </div>
+  <div class="m-foot"><button class="btn" data-act="close">${t('Cancelar')}</button>${cand.length?`<button class="btn primary" data-act="glSave" data-id="${g.id}">${t('Unir los marcados')}</button>`:''}</div>`;
+  showM();
+}
+Object.assign(actions, {
+  groupLink: id => openGroupLink(id),
+  glAll: () => document.querySelectorAll('.gl_ok').forEach(c=>c.checked = true),
+  glNone: () => document.querySelectorAll('.gl_ok').forEach(c=>c.checked = false),
+  glSave: id => { const g = groupById(id), ids = [...document.querySelectorAll('.gl_ok:checked')].map(c=>c.value);
+    ids.forEach(i=>{ const s = stuById(i); if(s){ s.groupId = g.id; if(g.school){ s.schoolRaw = s.schoolRaw || s.school; s.school = g.school; } } });
+    modal.close(); save(); render(); toast(pl(ids.length, t('{n} alumno unido al grupo {c}',{c:g.code}), t('{n} alumnos unidos al grupo {c}',{c:g.code}))); },
+  stuToMonitor: (id, el) => { if(!armed(el, t('Pulsa otra vez para convertirlo en monitor'))) return;
+    const s = stuById(id); if(!s) return;
+    const keep = ['name','firstName','lastName','email','gender','school','sek','country','language','periodId','arrival','departure','diet','foodAllergies','envAllergies','petAllergy','smokeFree','notes','groupId','dob','nationality','docId','docType','medical','familyId','age'];
+    const m = {id:uid(), role:'monitor', ownRoom:true, phone:'', tbc:/^(tbc|tbd)\b/i.test(String(s.firstName||s.name).trim())};
+    keep.forEach(k=>{ if(s[k]!==undefined) m[k] = s[k]; });
+    state.monitors = state.monitors||[]; state.monitors.push(m);
+    state.students = state.students.filter(x=>x.id!==id); state.students.forEach(x=>{ if(x.shareWith) x.shareWith = x.shareWith.filter(i=>i!==id); });
+    if(ui.selected===id) ui.selected = null; modal.close(); save(); render(); toast(t('{n} ahora es monitor',{n:m.name})); }
+});
 (async () => { await load();
   if(store==='shared-go'){ await initShared(); if(ui.askSeed) openSeedAsk(); return; }
   if(migrate()){ syncStays(); save(); } else syncStays(); render();
   setSaved(store==='none' ? t('Sin almacenamiento: los datos se perderán al cerrar') : state.families.length ? t('Datos cargados de este dispositivo') : ''); })();
+
 
 
 

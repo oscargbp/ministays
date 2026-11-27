@@ -61,7 +61,7 @@ La app instalada empieza vacía, porque guarda los datos aparte de la versión q
 ## 5. Actualizar la app más adelante
 
 1. Sustituye `index.html` en el repositorio por la versión nueva.
-2. Edita `sw.js` y cambia el número de `VERSION` (por ejemplo, de `ministays-v19` a `ministays-v20`).
+2. Edita `sw.js` y cambia el número de `VERSION` (por ejemplo, de `ministays-v21` a `ministays-v22`).
 3. La próxima vez que abras la app te avisará de que hay una versión nueva: ciérrala y vuelve a abrirla.
 
 ## Cosas a tener en cuenta
